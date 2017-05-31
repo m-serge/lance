@@ -4,6 +4,7 @@ const GameObject = require('./GameObject');
 const Serializer = require('./Serializer');
 const ThreeVector = require('./ThreeVector');
 const Quaternion = require('./Quaternion');
+const MAX_SNAPSHOTS = 10;
 
 /**
  * The PhysicalObject is the base class for physical game objects
@@ -30,6 +31,7 @@ class PhysicalObject extends GameObject {
         super(id);
         this.playerId = 0;
         this.bendingIncrements = 0;
+        this.snapshots = [];
 
         // set default position, velocity and quaternion
         this.position = new ThreeVector(0, 0, 0);
@@ -148,6 +150,61 @@ class PhysicalObject extends GameObject {
         // TODO: the following approach is encountering gimbal lock
         // this.quaternion.multiply(this.bendingQuaternionDelta);
         this.bendingIncrements--;
+    }
+
+    interpolatedSnapshot(t, i, ge) {  // HACK: remove this thir parameter
+        let s1 = this.snapshots[i];
+        let s2 = this.snapshots[i+1];
+        let percent = (t - s1.time) / (s2.time - s1.time);
+
+//HACK
+
+        let s = {
+            position: (new ThreeVector()).copy(s1.snapshot.position).lerp(s2.snapshot.position, percent),
+            quaternion: (new Quaternion()).copy(s1.snapshot.quaternion).slerp(s2.snapshot.quaternion, percent)
+        };
+
+        if (isNaN(s.position.x)) {
+            console.log('oops');
+        }
+        return s;
+    }
+
+    snapshot(t) {
+        if (this.snapshots.length >= MAX_SNAPSHOTS) this.snapshots.shift();
+        this.snapshots.push({ time: t, snapshot: { position: this.position, quaternion: this.quaternion } });
+    }
+
+    getPastSnapshot(t, ge) {
+
+        let ss = this.snapshots;
+
+        if (ss.length === 0) {
+            return this;
+        }
+
+        if (t <= ss[0].time) {
+            console.log('renderer too far in the past.');
+//HACK
+ge.trace.trace('renderer too far in the past.')
+            return ss[0].snapshot;
+        }
+
+        if (t > ss[ss.length-1].time) {
+            console.log('renderer too far in the future.');
+//HACK
+ge.trace.trace('renderer too far in the future.')
+            return ss[ss.length-1].snapshot;
+        }
+
+        for (let i = 1; i < ss.length; i++) {
+            if (t <= ss[i].time ) {
+                return this.interpolatedSnapshot(t, i - 1);
+            }
+        }
+
+        // should never reach this point
+        throw new Error('Unable to interpolate snapshot');
     }
 }
 

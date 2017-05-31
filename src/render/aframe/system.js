@@ -39,11 +39,16 @@ let AFrameSystem = {
         }
 
         // for each object in the world, update the a-frame element
+        let renderTime = (new Date()) - this.renderLag;
+// HACK: remove next line
+this.gameEngine.trace.trace(`rendering for time ${(new Date(renderTime)).toISOString()}`);
         this.gameEngine.world.forEachObject((id, o) => {
             let el = o.renderEl;
             if (el) {
-                let q = o.quaternion;
-                let p = o.position;
+                let snapshot = o.getPastSnapshot(renderTime, this.gameEngine); // HACK: remove second parameter
+this.gameEngine.trace.trace(`============= pos=${snapshot.position}  quat=${snapshot.quaternion}`);
+                let q = snapshot.quaternion;
+                let p = snapshot.position;
                 el.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
                 el.object3D.quaternion.set(q.x, q.y, q.z, q.w);
             }
@@ -55,6 +60,7 @@ let AFrameSystem = {
     setGlobals: function(gameEngine, renderer) {
         this.gameEngine = gameEngine;
         this.renderer = renderer;
+        this.renderLag = this.renderer.clientEngine.options.renderLag;
     }
 };
 

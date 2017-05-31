@@ -171,6 +171,10 @@ class ClientEngine {
             window.requestAnimationFrame(renderLoop);
         };
 
+        // set the stepZeroTime
+        this.stepZeroTime = (new Date()).getTime();
+
+        // the client engine start includes renderer initialization
         return this.renderer.init().then(() => {
             if (typeof window !== 'undefined')
                 window.requestAnimationFrame(renderLoop);
@@ -225,6 +229,15 @@ class ClientEngine {
         this.applyDelayedInputs();
         this.gameEngine.step();
         this.gameEngine.emit('client__postStep');
+
+        if (this.options.renderLag) {
+// HACK: if we reset stepZeroTime each time, then saveTime is simply equal to now()
+            this.stepZeroTime = (new Date()).getTime() - this.gameEngine.world.stepCount * this.options.stepPeriod;
+            let saveTime = this.stepZeroTime + this.gameEngine.world.stepCount * this.options.stepPeriod;
+// HACK: remove next line
+this.gameEngine.trace.trace(`saving object states for time ${(new Date(saveTime)).toISOString()}.  zero${(new Date(this.stepZeroTime)).toISOString()} + steps${this.gameEngine.world.stepCount}`);
+            this.gameEngine.world.forEachObject((id, o) => { o.snapshot(saveTime); });
+        }
 
         if (this.gameEngine.trace.length && this.socket) {
             // socket might not have been initialized at this point
@@ -293,6 +306,14 @@ class ClientEngine {
         this.messageIndex++;
     }
 
+    resetStep(step) {
+        this.gameEngine.trace.info(`========== world step count updated from ${this.gameEngine.world.stepCount} to ${step} ==========`);
+        this.gameEngine.world.stepCount = step;
+        this.stepZeroTime = (new Date()).getTime() - step * this.options.stepPeriod;
+// HACK: remove next line
+this.gameEngine.trace.trace(`setting new zero time ${(new Date(this.stepZeroTime)).toISOString()}.`);
+    }
+
     handleInboundMessage(syncData) {
 
         let syncEvents = this.networkTransmitter.deserializePayload(syncData).events;
@@ -309,10 +330,8 @@ class ClientEngine {
         this.gameEngine.trace.info(`========== inbound world update ${syncHeader.stepCount} ==========`);
 
         // finally update the stepCount
-        if (syncHeader.stepCount > this.gameEngine.world.stepCount + STEP_DRIFT_THRESHOLD__CLIENT_RESET) {
-            this.gameEngine.trace.info(`========== world step count updated from ${this.gameEngine.world.stepCount} to  ${syncHeader.stepCount} ==========`);
-            this.gameEngine.world.stepCount = syncHeader.stepCount;
-        }
+        if (syncHeader.stepCount > this.gameEngine.world.stepCount + STEP_DRIFT_THRESHOLD__CLIENT_RESET)
+            this.resetStep(syncHeader.stepCount);
     }
 
     handleOutboundInput() {
