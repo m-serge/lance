@@ -152,22 +152,15 @@ class PhysicalObject extends GameObject {
         this.bendingIncrements--;
     }
 
-    interpolatedSnapshot(t, i, ge) {  // HACK: remove this thir parameter
+    interpolatedSnapshot(t, i) {
         let s1 = this.snapshots[i];
         let s2 = this.snapshots[i+1];
         let percent = (t - s1.time) / (s2.time - s1.time);
 
-//HACK
-
-        let s = {
+        return {
             position: (new ThreeVector()).copy(s1.snapshot.position).lerp(s2.snapshot.position, percent),
             quaternion: (new Quaternion()).copy(s1.snapshot.quaternion).slerp(s2.snapshot.quaternion, percent)
         };
-
-        if (isNaN(s.position.x)) {
-            console.log('oops');
-        }
-        return s;
     }
 
     snapshot(t) {
@@ -186,14 +179,14 @@ class PhysicalObject extends GameObject {
         if (t <= ss[0].time) {
             console.log('renderer too far in the past.');
 //HACK
-ge.trace.trace('renderer too far in the past.')
+//ge.trace.trace('renderer too far in the past.')
             return ss[0].snapshot;
         }
 
         if (t > ss[ss.length-1].time) {
             console.log('renderer too far in the future.');
 //HACK
-ge.trace.trace('renderer too far in the future.')
+//ge.trace.trace('renderer too far in the future.')
             return ss[ss.length-1].snapshot;
         }
 

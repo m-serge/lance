@@ -231,11 +231,10 @@ class ClientEngine {
         this.gameEngine.emit('client__postStep');
 
         if (this.options.renderLag) {
-// HACK: if we reset stepZeroTime each time, then saveTime is simply equal to now()
-            this.stepZeroTime = (new Date()).getTime() - this.gameEngine.world.stepCount * this.options.stepPeriod;
-            let saveTime = this.stepZeroTime + this.gameEngine.world.stepCount * this.options.stepPeriod;
+            let saveTime = (new Date()).getTime();
+            this.stepZeroTime = saveTime - this.gameEngine.world.stepCount * this.options.stepPeriod;
 // HACK: remove next line
-this.gameEngine.trace.trace(`saving object states for time ${(new Date(saveTime)).toISOString()}.  zero${(new Date(this.stepZeroTime)).toISOString()} + steps${this.gameEngine.world.stepCount}`);
+// this.gameEngine.trace.trace(`saving object states for time ${(new Date(saveTime)).toISOString()}.  zero${(new Date(this.stepZeroTime)).toISOString()} + steps${this.gameEngine.world.stepCount}`);
             this.gameEngine.world.forEachObject((id, o) => { o.snapshot(saveTime); });
         }
 
@@ -311,7 +310,7 @@ this.gameEngine.trace.trace(`saving object states for time ${(new Date(saveTime)
         this.gameEngine.world.stepCount = step;
         this.stepZeroTime = (new Date()).getTime() - step * this.options.stepPeriod;
 // HACK: remove next line
-this.gameEngine.trace.trace(`setting new zero time ${(new Date(this.stepZeroTime)).toISOString()}.`);
+// this.gameEngine.trace.trace(`setting new zero time ${(new Date(this.stepZeroTime)).toISOString()}.`);
     }
 
     handleInboundMessage(syncData) {
