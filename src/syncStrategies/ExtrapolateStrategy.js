@@ -237,9 +237,10 @@ class ExtrapolateStrategy extends SyncStrategy {
         });
 
         // if there is a sync from the server, apply it now
-        if (this.lastSync)
+        if (this.lastSync && this.lastSync.stepCount <= this.gameEngine.world.stepCount ) {
             this.applySync();
-        this.lastSync = null;
+            this.lastSync = null;
+        }
     }
 }
 
