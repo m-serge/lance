@@ -70,6 +70,7 @@ class ClientEngine {
         // create the renderer
         this.renderer = this.gameEngine.renderer = new Renderer(gameEngine, this);
         this.lastStepTime = 0;
+        this.correction = 0;
 
         /**
         * client's player ID, as a string.
@@ -195,10 +196,10 @@ class ClientEngine {
         if (clientStep > serverStep + maxLead) {
             this.gameEngine.trace.warn(`step drift ${checkType}. [${clientStep} > ${serverStep} + ${maxLead}] Client is ahead of server.  Delaying next step.`);
             // this.scheduler.delayTick();
-            this.lastStepTime += 12; // HACK: need clean solution
+            // this.lastStepTime += 12; // HACK: need clean solution
         } else if (serverStep > clientStep + maxLag) {
             this.gameEngine.trace.warn(`step drift ${checkType}. [${serverStep} > ${clientStep} + ${maxLag}] Client is behind server.  Hurrying next step.`);
-            this.lastStepTime -= 12; // HACK: need clean solution
+            //this.lastStepTime -= 12; // HACK: need clean solution
             // this.scheduler.hurryTick();
         }
     }

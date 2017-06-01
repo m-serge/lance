@@ -38,29 +38,33 @@ class AFrameRenderer {
     draw(t, dt) {
         let p = this.clientEngine.options.stepPeriod;
 
-        if (this.clientEngine.lastStepTime + (10*p) < t) {
-            // HACK: remove next line
-            this.clientEngine.gameEngine.trace.trace(`============RESETTING lastTime=${this.clientEngine.lastStepTime} period=${p}`);
 
-            this.clientEngine.lastStepTime = t;
-            return;
-        }
+
+        // if (this.clientEngine.lastStepTime < t) {
+        //     // HACK: remove next line
+        //     this.clientEngine.gameEngine.trace.trace(`============RESETTING lastTime=${this.clientEngine.lastStepTime} period=${p}`);
+        //
+        //     this.clientEngine.lastStepTime = t;
+        //     return;
+        // }
 
 // HACK: remove next line
-this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING t=${t} dt=${dt} lastTime=${this.clientEngine.lastStepTime} period=${p}`);
+this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING t=${t} dt=${dt} lastTime=${this.clientEngine.lastStepTime} correction = ${this.clientEngine.correction} period=${p}`);
 
         // catch-up missed steps
         while (t > this.clientEngine.lastStepTime + p) {
 // HACK: remove next line
 this.clientEngine.gameEngine.trace.trace(`============RENDERER Extra call to client`);
-            this.clientEngine.step(this.clientEngine.lastStepTime + p, p);
+            this.clientEngine.step(this.clientEngine.lastStepTime + p, p + this.clientEngine.correction);
             this.clientEngine.lastStepTime += p;
-            dt -= p;
+            this.clientEngine.correction = 0;
+            // dt -= p;
         }
 
         // render-tuned step
-        this.clientEngine.step(t, dt);
+        this.clientEngine.step(t, t - this.clientEngine.lastStepTime + this.clientEngine.correction);
         this.clientEngine.lastStepTime += p;
+        this.clientEngine.correction = this.clientEngine.lastStepTime - t;
     }
 
     /**
