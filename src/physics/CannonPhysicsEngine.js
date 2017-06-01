@@ -20,8 +20,9 @@ class CannonPhysicsEngine extends PhysicsEngine {
     }
 
     // entry point for a single step of the Simple Physics
-    step(objectFilter) {
-        this.world.step(this.options.dt);
+    step(dt, objectFilter) {
+        dt = dt || this.options.dt;
+        this.world.step(dt);
     }
 
     addSphere(radius, mass) {

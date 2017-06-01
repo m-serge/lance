@@ -69,6 +69,7 @@ class ClientEngine {
 
         // create the renderer
         this.renderer = this.gameEngine.renderer = new Renderer(gameEngine, this);
+        this.lastStepTime = 0;
 
         /**
         * client's player ID, as a string.
@@ -155,25 +156,25 @@ class ClientEngine {
     start() {
 
         // schedule and start the game loop
-        this.scheduler = new Scheduler({
-            period: this.options.stepPeriod,
-            tick: this.step.bind(this),
-            delay: STEP_DELAY_MSEC
-        });
         this.gameEngine.start();
-        this.scheduler.start();
+        // this.scheduler = new Scheduler({
+        //     period: this.options.stepPeriod,
+        //     tick: this.step.bind(this),
+        //     delay: STEP_DELAY_MSEC
+        // });
+        // this.scheduler.start();
 
         // initialize the renderer
         // the render loop waits for next animation frame
         if (!this.renderer) alert('ERROR: game has not defined a renderer');
-        let renderLoop = () => {
-            this.renderer.draw();
-            window.requestAnimationFrame(renderLoop);
-        };
+        // let renderLoop = () => {
+        //     this.renderer.draw();
+        //     window.requestAnimationFrame(renderLoop);
+        // };
 
         return this.renderer.init().then(() => {
-            if (typeof window !== 'undefined')
-                window.requestAnimationFrame(renderLoop);
+            // if (typeof window !== 'undefined')
+            //     window.requestAnimationFrame(renderLoop);
             if (this.options.autoConnect) {
                 this.connect();
             }
@@ -193,14 +194,16 @@ class ClientEngine {
         let serverStep = this.gameEngine.serverStep;
         if (clientStep > serverStep + maxLead) {
             this.gameEngine.trace.warn(`step drift ${checkType}. [${clientStep} > ${serverStep} + ${maxLead}] Client is ahead of server.  Delaying next step.`);
-            this.scheduler.delayTick();
+            // this.scheduler.delayTick();
+            this.lastStepTime += 12; // HACK: need clean solution
         } else if (serverStep > clientStep + maxLag) {
             this.gameEngine.trace.warn(`step drift ${checkType}. [${serverStep} > ${clientStep} + ${maxLag}] Client is behind server.  Hurrying next step.`);
-            this.scheduler.hurryTick();
+            this.lastStepTime -= 12; // HACK: need clean solution
+            // this.scheduler.hurryTick();
         }
     }
 
-    step() {
+    step(t, dt) {
 
         // first update the trace state
         this.gameEngine.trace.setStep(this.gameEngine.world.stepCount + 1);
@@ -223,7 +226,7 @@ class ClientEngine {
         // perform game engine step
         this.handleOutboundInput();
         this.applyDelayedInputs();
-        this.gameEngine.step();
+        this.gameEngine.step(false, t, dt);
         this.gameEngine.emit('client__postStep');
 
         if (this.gameEngine.trace.length && this.socket) {

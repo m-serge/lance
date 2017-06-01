@@ -41,14 +41,22 @@ class Renderer {
     }
 
     /**
-     * The main draw function.  This method is called at high frequency,
-     * at the rate of the render loop.  Typically this is 60Hz, in WebVR 90Hz.
+     * The main draw function.  This drives the client main step
      */
-    draw() {
-        this.gameEngine.world.forEachObject((id, o) => {
-            if (typeof o.refreshRenderObject === 'function')
-                o.refreshRenderObject();
-        });
+    draw(t, dt) {
+
+        let p = this.clientEngine.options.stepPeriod;
+
+        // catch-up missed steps
+        while (t > this.clientEngine.lastStepTime + p) {
+            this.clientEngine.step(this.clientEngine.lastStepTime + p, p);
+            this.clientEngine.lastStepTime += p;
+            dt -= p;
+        }
+
+        // render-tuned step
+        this.clientEngine.step(t, t - this.clientEngine.lastStepTime);
+        this.clientEngine.lastStepTime += p;
     }
 
     /**

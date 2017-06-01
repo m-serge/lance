@@ -34,6 +34,35 @@ class AFrameRenderer {
         this.gameEngine.emit('client__slowFrameRate');
     }
 
+// HACK: why doesn't AFRAME renderer extend the base Renderer?
+    draw(t, dt) {
+        let p = this.clientEngine.options.stepPeriod;
+
+        if (this.clientEngine.lastStepTime + (10*p) < t) {
+            // HACK: remove next line
+            this.clientEngine.gameEngine.trace.trace(`============RESETTING lastTime=${this.clientEngine.lastStepTime} period=${p}`);
+
+            this.clientEngine.lastStepTime = t;
+            return;
+        }
+
+// HACK: remove next line
+this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING t=${t} dt=${dt} lastTime=${this.clientEngine.lastStepTime} period=${p}`);
+
+        // catch-up missed steps
+        while (t > this.clientEngine.lastStepTime + p) {
+// HACK: remove next line
+this.clientEngine.gameEngine.trace.trace(`============RENDERER Extra call to client`);
+            this.clientEngine.step(this.clientEngine.lastStepTime + p, p);
+            this.clientEngine.lastStepTime += p;
+            dt -= p;
+        }
+
+        // render-tuned step
+        this.clientEngine.step(t, dt);
+        this.clientEngine.lastStepTime += p;
+    }
+
     /**
      * Initialize the renderer.
      * @return {Promise} Resolves when renderer is ready.
@@ -54,17 +83,6 @@ class AFrameRenderer {
         });
 
         return Promise.resolve(); // eslint-disable-line new-cap
-    }
-
-    /**
-     * The main draw function.  This method is called at high frequency,
-     * at the rate of the render loop.  Typically this is 60Hz, in WebVR 90Hz.
-     */
-    draw() {
-        this.gameEngine.world.forEachObject((id, o) => {
-            if (typeof o.refreshRenderObject === 'function')
-                o.refreshRenderObject();
-        });
     }
 
 }

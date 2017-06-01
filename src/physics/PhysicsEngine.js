@@ -12,7 +12,8 @@ class PhysicsEngine {
     /**
      * A single Physics step.
      *
-     * @param {Function} objectFilter - a test function which filters which objects should move
+     * @param {Number} dt - [optional], time passed since last step
+     * @param {Function} objectFilter - [optional] a test function which filters which objects should move
      */
     step(objectFilter) {}
 
