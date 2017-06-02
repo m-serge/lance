@@ -135,7 +135,16 @@ class GameEngine {
         this.emit('server__start', { timestamp: (new Date()).getTime() });
     }
 
-    step(isReenact, t, dt) {
+    step(isReenact, t, dt, physicsOnly) {
+
+// HACK: remove next line
+this.trace.trace(`gameEngine running step with dt=${dt} physicsOnly=${physicsOnly}`);
+
+        if (physicsOnly) {
+            if (dt) dt /= 1000; // physics engines work in seconds
+            this.physicsEngine.step(dt, objectFilter);
+            return;
+        }
 
         // emit preStep event
         isReenact = Boolean(isReenact);
@@ -143,9 +152,6 @@ class GameEngine {
         let clientIDSpace = this.options.clientIDSpace;
         this.emit('preStep', { step, isReenact, dt });
 
-
-// HACK: remove next line
-this.trace.trace(`gameEngine running step with dt=${dt}`);
 
         // skip physics for shadow objects during re-enactment
         function objectFilter(o) {

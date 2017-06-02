@@ -3,7 +3,7 @@
 
 const EventEmitter = require('eventemitter3');
 const networkedPhysics = require('./aframe/system');
-
+const TIME_RESET_THRESHOLD = 100;
 
 // TODO: this class should extend the base Renderer or explain why it doesn't
 
@@ -21,6 +21,8 @@ class AFrameRenderer {
     constructor(gameEngine, clientEngine) {
         this.gameEngine = gameEngine;
         this.clientEngine = clientEngine;
+
+        this.gameEngine.on('client__stepReset', () => { this.doReset = true; });
 
         // mixin for EventEmitter
         Object.assign(this, EventEmitter.prototype);
@@ -42,29 +44,45 @@ class AFrameRenderer {
 
         // if (this.clientEngine.lastStepTime < t) {
         //     // HACK: remove next line
-        //     this.clientEngine.gameEngine.trace.trace(`============RESETTING lastTime=${this.clientEngine.lastStepTime} period=${p}`);
-        //
-        //     this.clientEngine.lastStepTime = t;
-        //     return;
-        // }
+        if (this.doReset || t > this.clientEngine.lastStepTime + TIME_RESET_THRESHOLD) {
+             this.doReset = false;
+             this.clientEngine.lastStepTime = t - p/2;
+             this.clientEngine.correction = p/2;
+             this.clientEngine.gameEngine.trace.trace(`============RESETTING lastTime=${this.clientEngine.lastStepTime} period=${p}`);
+        }
 
-// HACK: remove next line
-this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING t=${t} dt=${dt} lastTime=${this.clientEngine.lastStepTime} correction = ${this.clientEngine.correction} period=${p}`);
 
         // catch-up missed steps
         while (t > this.clientEngine.lastStepTime + p) {
 // HACK: remove next line
-this.clientEngine.gameEngine.trace.trace(`============RENDERER Extra call to client`);
+this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING EXTRA t=${t} LST=${this.clientEngine.lastStepTime} correction = ${this.clientEngine.correction} period=${p}`);
             this.clientEngine.step(this.clientEngine.lastStepTime + p, p + this.clientEngine.correction);
             this.clientEngine.lastStepTime += p;
             this.clientEngine.correction = 0;
-            // dt -= p;
         }
 
-        // render-tuned step
-        this.clientEngine.step(t, t - this.clientEngine.lastStepTime + this.clientEngine.correction);
+        // not ready for a real step yet
+        // might happen after catch up above
+        if (t < this.clientEngine.lastStepTime) {
+            this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING NOSTEP t=${t} dt=${t - this.clientEngine.lastStepTime} correction = ${this.clientEngine.correction} period=${p}`);
+
+            dt = t - this.clientEngine.lastStepTime + this.clientEngine.correction;
+            if (dt<0) dt = 0;
+            this.clientEngine.correction = this.clientEngine.lastStepTime - t;
+            this.clientEngine.step(t, dt, true); 
+            return;
+        }
+
+        // render-controlled step
+
+// HACK: remove next line
+this.clientEngine.gameEngine.trace.trace(`============RENDERER DRAWING t=${t} LST=${this.clientEngine.lastStepTime} correction = ${this.clientEngine.correction} period=${p}`);
+
+        dt =  t - this.clientEngine.lastStepTime + this.clientEngine.correction;
         this.clientEngine.lastStepTime += p;
         this.clientEngine.correction = this.clientEngine.lastStepTime - t;
+        this.clientEngine.step(t, dt);
+this.clientEngine.gameEngine.trace.trace(`============RENDERER DONE t=${t} LST=${this.clientEngine.lastStepTime} correction = ${this.clientEngine.correction} period=${p}`);
     }
 
     /**

@@ -194,17 +194,26 @@ class ClientEngine {
         let clientStep = this.gameEngine.world.stepCount;
         let serverStep = this.gameEngine.serverStep;
         if (clientStep > serverStep + maxLead) {
-            this.gameEngine.trace.warn(`step drift ${checkType}. [${clientStep} > ${serverStep} + ${maxLead}] Client is ahead of server.  Delaying next step.`);
+            this.lastStepTime += 12; // HACK: need clean solution
+            this.correction += 12;
+            this.gameEngine.trace.warn(`step drift ${checkType}. [${clientStep} > ${serverStep} + ${maxLead}] Client is ahead of server.  Delaying next step. LST now ${this.lastStepTime}`);
+
             // this.scheduler.delayTick();
-            // this.lastStepTime += 12; // HACK: need clean solution
         } else if (serverStep > clientStep + maxLag) {
             this.gameEngine.trace.warn(`step drift ${checkType}. [${serverStep} > ${clientStep} + ${maxLag}] Client is behind server.  Hurrying next step.`);
-            //this.lastStepTime -= 12; // HACK: need clean solution
+            this.lastStepTime -= 8; // HACK: need clean solution
+            this.correction -= 8;
             // this.scheduler.hurryTick();
         }
     }
 
-    step(t, dt) {
+    step(t, dt, physicsOnly) {
+
+        // physics only case
+        if (physicsOnly) {
+            this.gameEngine.step(false, t, dt, physicsOnly);
+            return;
+        }
 
         // first update the trace state
         this.gameEngine.trace.setStep(this.gameEngine.world.stepCount + 1);
@@ -315,6 +324,7 @@ class ClientEngine {
         // finally update the stepCount
         if (syncHeader.stepCount > this.gameEngine.world.stepCount + STEP_DRIFT_THRESHOLD__CLIENT_RESET) {
             this.gameEngine.trace.info(`========== world step count updated from ${this.gameEngine.world.stepCount} to  ${syncHeader.stepCount} ==========`);
+            this.gameEngine.emit('client__stepReset', { oldStep: this.gameEngine.world.stepCount, newStep: syncHeader.stepCount });
             this.gameEngine.world.stepCount = syncHeader.stepCount;
         }
     }
