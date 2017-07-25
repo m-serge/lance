@@ -14,6 +14,7 @@ class Serializer {
 
     constructor() {
         this.registeredClasses = {};
+        this.reflectiveClasses = {};
         this.customTypes = {};
         this.netSchemeSizeCache = {}; // used to cache calculated netSchemes sizes
         this.registerClass(require('./TwoVector'));
@@ -50,10 +51,19 @@ class Serializer {
         // if no classId is specified, hash one from the class name
         classId = classId ? classId : Utils.hashStr(classObj.name);
         if (this.registeredClasses[classId]) {
-            console.error(`Serializer: accidental override of classId ${classId} when registering class`, classObj);
+            console.error(`Serializer: classId collision for ${classId} when registering class`, classObj);
         }
 
         this.registeredClasses[classId] = classObj;
+    }
+
+    registerReflectiveClass(classDesc) {
+        let classId = Utils.hashStr(classDesc.name);
+        if (this.reflectiveClasses[classId]) {
+            console.error(`Serializer: classId collision for ${classId} when registering class`, classDesc);
+        }
+
+        this.reflectiveClasses[classId] = classDesc.netScheme;
     }
 
     deserialize(dataBuffer, byteOffset) {

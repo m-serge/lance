@@ -33,17 +33,22 @@ class GameEngine {
       * @param {Number} options.traceLevel - the trace level from 0 to 5.  Lower value traces more.
       * @param {Number} options.delayInputCount - client side only.  Introduce an artificial delay on the client to better match the time it will occur on the server.  This value sets the number of steps the client will wait before applying the input locally
       * @param {Object} options.physics - options object which will be passed to the physics engine constructor
+      * @param {Boolean} options.embedded - Lance is running as embedded-script mode
       */
     constructor(PhysicsEngine, options) {
 
         // place the game engine in the LANCE globals
+        // TODO the window.LANCE global API should be documented
+        // and placed in a separate class.
         const glob = (typeof window === 'undefined') ? global : window;
         glob.LANCE = { gameEngine: this };
+        this.LANCE = glob.LANCE;
 
         // if no GameWorld is specified, use the default one
         this.options = Object.assign({
             GameWorld: GameWorld,
             traceLevel: Trace.TRACE_NONE,
+            embedded: false,
             physics: {}
         }, options);
 
@@ -91,7 +96,12 @@ class GameEngine {
         this.emit = eventEmitter.emit;
 
         // set up trace
-        this.trace = new Trace({ traceLevel: this.options.traceLevel });
+        glob.LANCE.trace = this.trace = new Trace({ traceLevel: this.options.traceLevel });
+
+        // embedded mode
+        ['on', 'once', 'removeListener'].forEach((foo) => {
+            glob.LANCE[foo] = this[foo].bind(this);
+        });
     }
 
     findLocalShadow(serverObj) {
@@ -411,6 +421,13 @@ class GameEngine {
  * @param {Number} input.step - input execution step
  * @param {Number} playerId - the player ID
  */
+
+ /**
+  * Client has connected to the game server
+  * This is emitted before "playerJoined"
+  *
+  * @event GameEngine#client__connected
+  */
 
 /**
  * Client received a sync from the server

@@ -74,6 +74,7 @@ class ServerEngine {
         this.requestImmediateUpdate = false;
 
         io.on('connection', this.onPlayerConnected.bind(this));
+        io.on('registerReflectiveClass', (classDesc) => { this.serializer.registerReflectiveClass(classDesc); });
         this.gameEngine.on('objectAdded', this.onObjectAdded.bind(this));
         this.gameEngine.on('objectDestroyed', this.onObjectDestroyed.bind(this));
 

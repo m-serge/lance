@@ -6,6 +6,7 @@ const Synchronizer = require('./Synchronizer');
 const Serializer = require('./serialize/Serializer');
 const NetworkMonitor = require('./network/NetworkMonitor');
 const NetworkTransmitter = require('./network/NetworkTransmitter');
+const Renderer = require('./render/Renderer');
 
 // externalizing these parameters as options would add confusion to game
 // developers, and provide no real benefit.
@@ -42,7 +43,7 @@ class ClientEngine {
       * @param {Number} inputOptions.syncOptions.remoteObjBending - amount of bending towards original client position, after each sync, for remote objects
       * @param {Renderer} Renderer - the Renderer class constructor
       */
-    constructor(gameEngine, inputOptions, Renderer) {
+    constructor(gameEngine, inputOptions, GameRenderer) {
 
         this.options = Object.assign({
             autoConnect: true,
@@ -72,7 +73,8 @@ class ClientEngine {
         this.outboundMessages = [];
 
         // create the renderer
-        this.renderer = this.gameEngine.renderer = new Renderer(gameEngine, this);
+        if (GameRenderer === undefined) GameRenderer = Renderer;
+        this.renderer = this.gameEngine.renderer = new GameRenderer(gameEngine, this);
 
         // step scheduler
         this.scheduler = null;
@@ -92,6 +94,18 @@ class ClientEngine {
             this.delayedInputs = [];
             for (let i = 0; i < inputOptions.delayInputCount; i++)
                 this.delayedInputs[i] = [];
+        }
+
+        // TODO: the window.LANCE external API should be constructed
+        // in one place.  Either gameEngine or ClientEngine, not both.
+        // add reflective Class declaration on the embedded API
+        this.gameEngine.LANCE.defineObject = (name, netScheme) => {
+
+            // on the client, register the reflective Class
+            this.serializer.registerReflectiveClass({ name, netScheme });
+
+            // request registration on the server now
+            this.socket.emit('registerReflectiveClass', { name, netScheme });
         }
     }
 
@@ -150,6 +164,8 @@ class ClientEngine {
                 that.socket.on('worldUpdate', (worldData) => {
                     that.inboundMessages.push(worldData);
                 });
+
+                that.gameEngine.emit('client__connected');
             });
         }
 
