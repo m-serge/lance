@@ -4,6 +4,7 @@ const Utils = require('./lib/Utils');
 const Scheduler = require('./lib/Scheduler');
 const Synchronizer = require('./Synchronizer');
 const Serializer = require('./serialize/Serializer');
+const DynamicObject = require('./serialize/DynamicObject');
 const NetworkMonitor = require('./network/NetworkMonitor');
 const NetworkTransmitter = require('./network/NetworkTransmitter');
 const Renderer = require('./render/Renderer');
@@ -96,16 +97,31 @@ class ClientEngine {
                 this.delayedInputs[i] = [];
         }
 
+        // EMBEDDED MODE
         // TODO: the window.LANCE external API should be constructed
         // in one place.  Either gameEngine or ClientEngine, not both.
         // add reflective Class declaration on the embedded API
         this.gameEngine.LANCE.defineObject = (name, netScheme) => {
 
             // on the client, register the reflective Class
-            this.serializer.registerReflectiveClass({ name, netScheme });
+            // TODO: currently registerReflectiveClass assumes DynamicObject but we need a switch here for each base class
+            this.serializer.registerReflectiveClass(DynamicObject, { name, netScheme });
 
             // request registration on the server now
             this.socket.emit('registerReflectiveClass', { name, netScheme });
+        }
+
+        // EMBEDDED MODE
+        // add an object in embedded mode
+        this.gameEngine.LANCE.newObject = (className, attributes) => {
+            let o = new DynamicObject();
+            Object.assign(o, attributes);
+            return o;
+        }
+
+        // EMBEDDED MODE
+        this.gameEngine.LANCE.updateObjectOnServer = (obj) => {
+            this.socket.emit('clientSync', obj.serialize(this.serializer).dataBuffer);
         }
     }
 
@@ -151,6 +167,8 @@ class ClientEngine {
 
                 that.networkMonitor.registerClient(that);
 
+                that.gameEngine.emit('client__connected');
+
                 that.socket.once('connect', () => {
                     console.log('connection made');
                     resolve();
@@ -159,13 +177,13 @@ class ClientEngine {
                 that.socket.on('playerJoined', (playerData) => {
                     that.playerId = playerData.playerId;
                     that.messageIndex = Number(that.playerId) * 10000;
+                    that.gameEngine.emit('playerJoined', playerData);
                 });
 
                 that.socket.on('worldUpdate', (worldData) => {
                     that.inboundMessages.push(worldData);
                 });
 
-                that.gameEngine.emit('client__connected');
             });
         }
 
@@ -199,6 +217,7 @@ class ClientEngine {
         // the render loop waits for next animation frame
         if (!this.renderer) alert('ERROR: game has not defined a renderer');
         let renderLoop = () => {
+            this.gameEngine.emit('client__draw');
             this.renderer.draw();
             window.requestAnimationFrame(renderLoop);
         };

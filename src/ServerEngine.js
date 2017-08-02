@@ -4,6 +4,7 @@ const fs = require('fs');
 const Utils = require('./lib/Utils');
 const Scheduler = require('./lib/Scheduler');
 const Serializer = require('./serialize/Serializer');
+const DynamicObject = require('./serialize/DynamicObject');
 const NetworkTransmitter = require('./network/NetworkTransmitter');
 const NetworkMonitor = require('./network/NetworkMonitor');
 
@@ -74,7 +75,6 @@ class ServerEngine {
         this.requestImmediateUpdate = false;
 
         io.on('connection', this.onPlayerConnected.bind(this));
-        io.on('registerReflectiveClass', (classDesc) => { this.serializer.registerReflectiveClass(classDesc); });
         this.gameEngine.on('objectAdded', this.onObjectAdded.bind(this));
         this.gameEngine.on('objectDestroyed', this.onObjectDestroyed.bind(this));
 
@@ -246,7 +246,13 @@ class ServerEngine {
 
         console.log('Client Connected', socket.id);
 
-        let playerEvent = { id: socket.id, playerId, joinTime: socket.joinTime, disconnectTime: 0 };
+        let playerEvent = {
+            id: socket.id,
+            playerId,
+            playerCount: this.gameEngine.world.playerCount,
+            joinTime: socket.joinTime,
+            disconnectTime: 0
+        };
         this.gameEngine.emit('server__playerJoined', playerEvent);
         this.gameEngine.emit('playerJoined', playerEvent);
         socket.emit('playerJoined', playerEvent);
@@ -270,6 +276,10 @@ class ServerEngine {
             traceData.forEach(t => { traceString += `[${t.time}]${t.step}>${t.data}\n`; });
             fs.appendFile(`${that.options.tracesPath}client.${playerId}.trace`, traceString, err => { if (err) throw err; });
         });
+
+        socket.on('clientSync', this.clientSync.bind(this));
+        // TODO: currently registerReflectiveClass assumes DynamicObject but we need a switch here for each base class
+        socket.on('registerReflectiveClass', (classDesc) => { this.serializer.registerReflectiveClass(DynamicObject, classDesc); });
 
         this.networkMonitor.registerPlayerOnServer(socket);
     }
@@ -349,6 +359,13 @@ class ServerEngine {
         return JSON.stringify(gameStatus);
     }
 
+    clientSync(s) {
+        if (!this.options.clientControlled)
+            return;
+
+        let syncObj = this.Serializer.deserialize(s);
+        console.log('got a request from client to update object ', syncObj);
+    }
 }
 
 module.exports = ServerEngine;

@@ -57,12 +57,13 @@ class Serializer {
         this.registeredClasses[classId] = classObj;
     }
 
-    registerReflectiveClass(classDesc) {
+    registerReflectiveClass(baseClass, classDesc) {
         let classId = Utils.hashStr(classDesc.name);
         if (this.reflectiveClasses[classId]) {
             console.error(`Serializer: classId collision for ${classId} when registering class`, classDesc);
         }
 
+        this.registeredClasses[classId] = baseClass;
         this.reflectiveClasses[classId] = classDesc.netScheme;
     }
 
