@@ -8,9 +8,9 @@ var _Utils = require('./../lib/Utils');
 
 var _Utils2 = _interopRequireDefault(_Utils);
 
-var _Serializer = require('./Serializer');
+var _types = require('./types');
 
-var _Serializer2 = _interopRequireDefault(_Serializer);
+var _types2 = _interopRequireDefault(_types);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -85,22 +85,22 @@ class Serializable {
                     serializer.writeDataView(dataView, this[property], bufferOffset + localBufferOffset, netScheme[property]);
                 }
 
-                if (netScheme[property].type === _Serializer2.default.TYPES.STRING) {
+                if (netScheme[property].type === _types2.default.STRING) {
                     // derive the size of the string
                     localBufferOffset += Uint16Array.BYTES_PER_ELEMENT;
                     if (this[property] !== null) localBufferOffset += this[property].length * Uint16Array.BYTES_PER_ELEMENT;
-                } else if (netScheme[property].type == _Serializer2.default.TYPES.CLASSINSTANCE) {
+                } else if (netScheme[property].type == _types2.default.CLASSINSTANCE) {
                     // derive the size of the included class
                     let objectInstanceBufferOffset = this[property].serialize(serializer, { dry: true }).bufferOffset;
                     localBufferOffset += objectInstanceBufferOffset;
-                } else if (netScheme[property].type == _Serializer2.default.TYPES.LIST) {
+                } else if (netScheme[property].type == _types2.default.LIST) {
                     // derive the size of the list
                     // list starts with number of elements
                     localBufferOffset += Uint16Array.BYTES_PER_ELEMENT;
 
                     for (let item of this[property]) {
                         // todo inelegant, currently doesn't support list of lists
-                        if (netScheme[property].itemType == _Serializer2.default.TYPES.CLASSINSTANCE) {
+                        if (netScheme[property].itemType == _types2.default.CLASSINSTANCE) {
                             let listBufferOffset = item.serialize(serializer, { dry: true }).bufferOffset;
                             localBufferOffset += listBufferOffset;
                         } else {
@@ -127,7 +127,7 @@ class Serializable {
 
         // get list of string properties which changed
         let netScheme = this.constructor.netScheme;
-        let isString = p => netScheme[p].type === _Serializer2.default.TYPES.STRING;
+        let isString = p => netScheme[p].type === _types2.default.STRING;
         let hasChanged = p => prevObject[p] !== this[p];
         let changedStrings = Object.keys(netScheme).filter(isString).filter(hasChanged);
         if (!changedStrings) return this;
@@ -144,10 +144,10 @@ class Serializable {
         for (let p of Object.keys(netScheme)) {
 
             // ignore classes and lists
-            if (netScheme[p].type === _Serializer2.default.TYPES.LIST || netScheme[p].type === _Serializer2.default.TYPES.CLASSINSTANCE) continue;
+            if (netScheme[p].type === _types2.default.LIST || netScheme[p].type === _types2.default.CLASSINSTANCE) continue;
 
             // strings might be pruned
-            if (netScheme[p].type === _Serializer2.default.TYPES.STRING) {
+            if (netScheme[p].type === _types2.default.STRING) {
                 if (typeof other[p] === 'string') this[p] = other[p];
                 continue;
             }

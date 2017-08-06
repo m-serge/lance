@@ -4,9 +4,9 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Serializer = require('./../serialize/Serializer');
+var _types = require('./../serialize/types');
 
-var _Serializer2 = _interopRequireDefault(_Serializer);
+var _types2 = _interopRequireDefault(_types);
 
 var _NetworkedEventFactory = require('./NetworkedEventFactory');
 
@@ -35,29 +35,29 @@ class NetworkTransmitter {
 
         this.registerNetworkedEventFactory('objectUpdate', {
             netScheme: {
-                stepCount: { type: _Serializer2.default.TYPES.INT32 },
-                objectInstance: { type: _Serializer2.default.TYPES.CLASSINSTANCE }
+                stepCount: { type: _types2.default.INT32 },
+                objectInstance: { type: _types2.default.CLASSINSTANCE }
             }
         });
 
         this.registerNetworkedEventFactory('objectCreate', {
             netScheme: {
-                stepCount: { type: _Serializer2.default.TYPES.INT32 },
-                objectInstance: { type: _Serializer2.default.TYPES.CLASSINSTANCE }
+                stepCount: { type: _types2.default.INT32 },
+                objectInstance: { type: _types2.default.CLASSINSTANCE }
             }
         });
 
         this.registerNetworkedEventFactory('objectDestroy', {
             netScheme: {
-                stepCount: { type: _Serializer2.default.TYPES.INT32 },
-                objectInstance: { type: _Serializer2.default.TYPES.CLASSINSTANCE }
+                stepCount: { type: _types2.default.INT32 },
+                objectInstance: { type: _types2.default.CLASSINSTANCE }
             }
         });
 
         this.registerNetworkedEventFactory('syncHeader', {
             netScheme: {
-                stepCount: { type: _Serializer2.default.TYPES.INT32 },
-                fullUpdate: { type: _Serializer2.default.TYPES.UINT8 }
+                stepCount: { type: _types2.default.INT32 },
+                fullUpdate: { type: _types2.default.UINT8 }
             }
         });
     }

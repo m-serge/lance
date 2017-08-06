@@ -4,13 +4,13 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _Serializer = require('./../serialize/Serializer');
-
-var _Serializer2 = _interopRequireDefault(_Serializer);
-
 var _Serializable = require('./../serialize/Serializable');
 
 var _Serializable2 = _interopRequireDefault(_Serializable);
+
+var _types = require('./../serialize/types');
+
+var _types2 = _interopRequireDefault(_types);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -22,8 +22,8 @@ class NetworkedEventCollection extends _Serializable2.default {
     static get netScheme() {
         return {
             events: {
-                type: _Serializer2.default.TYPES.LIST,
-                itemType: _Serializer2.default.TYPES.CLASSINSTANCE
+                type: _types2.default.LIST,
+                itemType: _types2.default.CLASSINSTANCE
             }
         };
     }

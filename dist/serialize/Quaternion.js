@@ -8,13 +8,13 @@ var _Serializable = require('./Serializable');
 
 var _Serializable2 = _interopRequireDefault(_Serializable);
 
-var _Serializer = require('./Serializer');
-
-var _Serializer2 = _interopRequireDefault(_Serializer);
-
 var _ThreeVector = require('./ThreeVector');
 
 var _ThreeVector2 = _interopRequireDefault(_ThreeVector);
+
+var _types = require('./types');
+
+var _types2 = _interopRequireDefault(_types);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -26,10 +26,10 @@ class Quaternion extends _Serializable2.default {
 
     static get netScheme() {
         return {
-            w: { type: _Serializer2.default.TYPES.FLOAT32 },
-            x: { type: _Serializer2.default.TYPES.FLOAT32 },
-            y: { type: _Serializer2.default.TYPES.FLOAT32 },
-            z: { type: _Serializer2.default.TYPES.FLOAT32 }
+            w: { type: _types2.default.FLOAT32 },
+            x: { type: _types2.default.FLOAT32 },
+            y: { type: _types2.default.FLOAT32 },
+            z: { type: _types2.default.FLOAT32 }
         };
     }
 

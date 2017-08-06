@@ -8,10 +8,6 @@ var _GameObject = require('./GameObject');
 
 var _GameObject2 = _interopRequireDefault(_GameObject);
 
-var _Serializer = require('./Serializer');
-
-var _Serializer2 = _interopRequireDefault(_Serializer);
-
 var _ThreeVector = require('./ThreeVector');
 
 var _ThreeVector2 = _interopRequireDefault(_ThreeVector);
@@ -19,6 +15,10 @@ var _ThreeVector2 = _interopRequireDefault(_ThreeVector);
 var _Quaternion = require('./Quaternion');
 
 var _Quaternion2 = _interopRequireDefault(_Quaternion);
+
+var _types = require('./types');
+
+var _types2 = _interopRequireDefault(_types);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -51,17 +51,17 @@ class PhysicalObject extends _GameObject2.default {
     * @example
     *     static get netScheme() {
     *       return Object.assign({
-    *           mojo: { type: Serializer.TYPES.UINT8 },
+    *           mojo: { type: TYPES.UINT8 },
     *         }, super.netScheme);
     *     }
     */
     static get netScheme() {
         return Object.assign({
-            playerId: { type: _Serializer2.default.TYPES.INT16 },
-            position: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-            quaternion: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-            velocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-            angularVelocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE }
+            playerId: { type: _types2.default.INT16 },
+            position: { type: _types2.default.CLASSINSTANCE },
+            quaternion: { type: _types2.default.CLASSINSTANCE },
+            velocity: { type: _types2.default.CLASSINSTANCE },
+            angularVelocity: { type: _types2.default.CLASSINSTANCE }
         }, super.netScheme);
     }
 

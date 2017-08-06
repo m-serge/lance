@@ -20,6 +20,10 @@ var _MathUtils = require('../lib/MathUtils');
 
 var _MathUtils2 = _interopRequireDefault(_MathUtils);
 
+var _types = require('./types');
+
+var _types2 = _interopRequireDefault(_types);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /**
@@ -53,18 +57,18 @@ class DynamicObject extends _GameObject2.default {
     * @example
     *     static get netScheme() {
     *       return Object.assign({
-    *           mojo: { type: Serializer.TYPES.UINT8 },
+    *           mojo: { type: TYPES.UINT8 },
     *         }, super.netScheme);
     *     }
     */
     static get netScheme() {
         return Object.assign({
-            playerId: { type: _Serializer2.default.TYPES.INT16 },
-            position: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-            width: { type: _Serializer2.default.TYPES.INT16 },
-            height: { type: _Serializer2.default.TYPES.INT16 },
-            velocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-            angle: { type: _Serializer2.default.TYPES.FLOAT32 }
+            playerId: { type: _types2.default.INT16 },
+            position: { type: _types2.default.CLASSINSTANCE },
+            width: { type: _types2.default.INT16 },
+            height: { type: _types2.default.INT16 },
+            velocity: { type: _types2.default.CLASSINSTANCE },
+            angle: { type: _types2.default.FLOAT32 }
         }, super.netScheme);
     }
 

@@ -8,9 +8,9 @@ var _Serializable = require('./Serializable');
 
 var _Serializable2 = _interopRequireDefault(_Serializable);
 
-var _Serializer = require('./Serializer');
+var _types = require('./types');
 
-var _Serializer2 = _interopRequireDefault(_Serializer);
+var _types2 = _interopRequireDefault(_types);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -22,8 +22,8 @@ class TwoVector extends _Serializable2.default {
 
     static get netScheme() {
         return {
-            x: { type: _Serializer2.default.TYPES.FLOAT32 },
-            y: { type: _Serializer2.default.TYPES.FLOAT32 }
+            x: { type: _types2.default.FLOAT32 },
+            y: { type: _types2.default.FLOAT32 }
         };
     }
 
