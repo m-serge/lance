@@ -1,7 +1,7 @@
 import GameObject from './GameObject';
-import Serializer from './Serializer';
 import ThreeVector from './ThreeVector';
 import Quaternion from './Quaternion';
+import TYPES from './types';
 
 /**
  * The PhysicalObject is the base class for physical game objects
@@ -32,17 +32,17 @@ export default class PhysicalObject extends GameObject {
     * @example
     *     static get netScheme() {
     *       return Object.assign({
-    *           mojo: { type: Serializer.TYPES.UINT8 },
+    *           mojo: { type: TYPES.UINT8 },
     *         }, super.netScheme);
     *     }
     */
     static get netScheme() {
         return Object.assign({
-            playerId: { type: Serializer.TYPES.INT16 },
-            position: { type: Serializer.TYPES.CLASSINSTANCE },
-            quaternion: { type: Serializer.TYPES.CLASSINSTANCE },
-            velocity: { type: Serializer.TYPES.CLASSINSTANCE },
-            angularVelocity: { type: Serializer.TYPES.CLASSINSTANCE }
+            playerId: { type: TYPES.INT16 },
+            position: { type: TYPES.CLASSINSTANCE },
+            quaternion: { type: TYPES.CLASSINSTANCE },
+            velocity: { type: TYPES.CLASSINSTANCE },
+            angularVelocity: { type: TYPES.CLASSINSTANCE }
         }, super.netScheme);
     }
 

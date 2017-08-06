@@ -1,5 +1,5 @@
 import Serializable from './Serializable';
-import Serializer from './Serializer';
+import TYPES from './types';
 
 /**
  * GameObject is the base class of all game objects.
@@ -12,7 +12,7 @@ export default class GameObject extends Serializable {
 
     static get netScheme() {
         return {
-            id: { type: Serializer.TYPES.INT32 }
+            id: { type: TYPES.INT32 }
         };
     }
 

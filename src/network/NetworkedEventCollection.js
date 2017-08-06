@@ -1,5 +1,5 @@
-import Serializer from './../serialize/Serializer';
 import Serializable from './../serialize/Serializable';
+import TYPES from './../serialize/types';
 
 /**
  * Defines a collection of NetworkEvents to be transmitted over the wire
@@ -9,8 +9,8 @@ export default class NetworkedEventCollection extends Serializable {
     static get netScheme() {
         return {
             events: {
-                type: Serializer.TYPES.LIST,
-                itemType: Serializer.TYPES.CLASSINSTANCE
+                type: TYPES.LIST,
+                itemType: TYPES.CLASSINSTANCE
             },
         };
     }

@@ -1,6 +1,6 @@
 import Serializable from './Serializable';
-import Serializer from './Serializer';
 import ThreeVector from './ThreeVector';
+import TYPES from './types';
 
 /**
  * A Quaternion is a geometric object which can be used to
@@ -10,10 +10,10 @@ export default class Quaternion extends Serializable {
 
     static get netScheme() {
         return {
-            w: { type: Serializer.TYPES.FLOAT32 },
-            x: { type: Serializer.TYPES.FLOAT32 },
-            y: { type: Serializer.TYPES.FLOAT32 },
-            z: { type: Serializer.TYPES.FLOAT32 }
+            w: { type: TYPES.FLOAT32 },
+            x: { type: TYPES.FLOAT32 },
+            y: { type: TYPES.FLOAT32 },
+            z: { type: TYPES.FLOAT32 }
         };
     }
 

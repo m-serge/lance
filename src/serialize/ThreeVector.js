@@ -1,5 +1,5 @@
 import Serializable from './Serializable';
-import Serializer from './Serializer';
+import TYPES from './types';
 
 /**
  * A ThreeVector is a geometric object which is completely described
@@ -9,9 +9,9 @@ export default class ThreeVector extends Serializable {
 
     static get netScheme() {
         return {
-            x: { type: Serializer.TYPES.FLOAT32 },
-            y: { type: Serializer.TYPES.FLOAT32 },
-            z: { type: Serializer.TYPES.FLOAT32 }
+            x: { type: TYPES.FLOAT32 },
+            y: { type: TYPES.FLOAT32 },
+            z: { type: TYPES.FLOAT32 }
         };
     }
 

@@ -2,6 +2,7 @@ import TwoVector from './TwoVector';
 import GameObject from './GameObject';
 import Serializer from './Serializer';
 import MathUtils from '../lib/MathUtils';
+import TYPES from './types';
 
 /**
  * DynamicObject is the base class of the game's objects, for games which
@@ -34,18 +35,18 @@ export default class DynamicObject extends GameObject {
     * @example
     *     static get netScheme() {
     *       return Object.assign({
-    *           mojo: { type: Serializer.TYPES.UINT8 },
+    *           mojo: { type: TYPES.UINT8 },
     *         }, super.netScheme);
     *     }
     */
     static get netScheme() {
         return Object.assign({
-            playerId: { type: Serializer.TYPES.INT16 },
-            position: { type: Serializer.TYPES.CLASSINSTANCE },
-            width: { type: Serializer.TYPES.INT16 },
-            height: { type: Serializer.TYPES.INT16 },
-            velocity: { type: Serializer.TYPES.CLASSINSTANCE },
-            angle: { type: Serializer.TYPES.FLOAT32 }
+            playerId: { type: TYPES.INT16 },
+            position: { type: TYPES.CLASSINSTANCE },
+            width: { type: TYPES.INT16 },
+            height: { type: TYPES.INT16 },
+            velocity: { type: TYPES.CLASSINSTANCE },
+            angle: { type: TYPES.FLOAT32 }
         }, super.netScheme);
     }
 

@@ -2,6 +2,7 @@ import Utils from './../lib/Utils';
 import TwoVector from './TwoVector';
 import ThreeVector from './ThreeVector';
 import Quaternion from './Quaternion';
+import TYPES from './types';
 
 const MAX_UINT_16 = 0xFFFF;
 
@@ -39,7 +40,7 @@ export default class Serializer {
      * @return {Boolean} True if type can be assigned
      */
     static typeCanAssign(type) {
-        return type !== Serializer.TYPES.CLASSINSTANCE && type !== Serializer.TYPES.LIST;
+        return type !== TYPES.CLASSINSTANCE && type !== TYPES.LIST;
     }
 
     /**
@@ -84,17 +85,17 @@ export default class Serializer {
     }
 
     writeDataView(dataView, value, bufferOffset, netSchemProp) {
-        if (netSchemProp.type == Serializer.TYPES.FLOAT32) {
+        if (netSchemProp.type == TYPES.FLOAT32) {
             dataView.setFloat32(bufferOffset, value);
-        } else if (netSchemProp.type == Serializer.TYPES.INT32) {
+        } else if (netSchemProp.type == TYPES.INT32) {
             dataView.setInt32(bufferOffset, value);
-        } else if (netSchemProp.type == Serializer.TYPES.INT16) {
+        } else if (netSchemProp.type == TYPES.INT16) {
             dataView.setInt16(bufferOffset, value);
-        } else if (netSchemProp.type == Serializer.TYPES.INT8) {
+        } else if (netSchemProp.type == TYPES.INT8) {
             dataView.setInt8(bufferOffset, value);
-        } else if (netSchemProp.type == Serializer.TYPES.UINT8) {
+        } else if (netSchemProp.type == TYPES.UINT8) {
             dataView.setUint8(bufferOffset, value);
-        } else if (netSchemProp.type == Serializer.TYPES.STRING) {
+        } else if (netSchemProp.type == TYPES.STRING) {
 
             //   MAX_UINT_16 is a reserved (length) value which indicates string hasn't changed
             if (value === null) {
@@ -106,12 +107,12 @@ export default class Serializer {
                 for (let i = 0; i < strLen; i++)
                     dataView.setUint16(bufferOffset + localBufferOffset + i*2, value.charCodeAt(i));
             }
-        } else if (netSchemProp.type == Serializer.TYPES.CLASSINSTANCE) {
+        } else if (netSchemProp.type == TYPES.CLASSINSTANCE) {
             value.serialize(this, {
                 dataBuffer: dataView.buffer,
                 bufferOffset: bufferOffset
             });
-        } else if (netSchemProp.type == Serializer.TYPES.LIST) {
+        } else if (netSchemProp.type == TYPES.LIST) {
             let localBufferOffset = 0;
 
             // a list is comprised of the number of items followed by the items
@@ -120,7 +121,7 @@ export default class Serializer {
 
             for (let item of value) {
                 // TODO: inelegant, currently doesn't support list of lists
-                if (netSchemProp.itemType == Serializer.TYPES.CLASSINSTANCE) {
+                if (netSchemProp.itemType == TYPES.CLASSINSTANCE) {
                     let serializedObj = item.serialize(this, {
                         dataBuffer: dataView.buffer,
                         bufferOffset: bufferOffset + localBufferOffset
@@ -143,22 +144,22 @@ export default class Serializer {
     readDataView(dataView, bufferOffset, netSchemProp) {
         let data, bufferSize;
 
-        if (netSchemProp.type == Serializer.TYPES.FLOAT32) {
+        if (netSchemProp.type == TYPES.FLOAT32) {
             data = dataView.getFloat32(bufferOffset);
             bufferSize = this.getTypeByteSize(netSchemProp.type);
-        } else if (netSchemProp.type == Serializer.TYPES.INT32) {
+        } else if (netSchemProp.type == TYPES.INT32) {
             data = dataView.getInt32(bufferOffset);
             bufferSize = this.getTypeByteSize(netSchemProp.type);
-        } else if (netSchemProp.type == Serializer.TYPES.INT16) {
+        } else if (netSchemProp.type == TYPES.INT16) {
             data = dataView.getInt16(bufferOffset);
             bufferSize = this.getTypeByteSize(netSchemProp.type);
-        } else if (netSchemProp.type == Serializer.TYPES.INT8) {
+        } else if (netSchemProp.type == TYPES.INT8) {
             data = dataView.getInt8(bufferOffset);
             bufferSize = this.getTypeByteSize(netSchemProp.type);
-        } else if (netSchemProp.type == Serializer.TYPES.UINT8) {
+        } else if (netSchemProp.type == TYPES.UINT8) {
             data = dataView.getUint8(bufferOffset);
             bufferSize = this.getTypeByteSize(netSchemProp.type);
-        } else if (netSchemProp.type == Serializer.TYPES.STRING) {
+        } else if (netSchemProp.type == TYPES.STRING) {
             let length = dataView.getUint16(bufferOffset);
             let localBufferOffset = Uint16Array.BYTES_PER_ELEMENT;
             bufferSize = localBufferOffset;
@@ -171,11 +172,11 @@ export default class Serializer {
                 data = String.fromCharCode.apply(null, a);
                 bufferSize += length * Uint16Array.BYTES_PER_ELEMENT;
             }
-        } else if (netSchemProp.type == Serializer.TYPES.CLASSINSTANCE) {
+        } else if (netSchemProp.type == TYPES.CLASSINSTANCE) {
             var deserializeData = this.deserialize(dataView.buffer, bufferOffset);
             data = deserializeData.obj;
             bufferSize = deserializeData.byteOffset;
-        } else if (netSchemProp.type == Serializer.TYPES.LIST) {
+        } else if (netSchemProp.type == TYPES.LIST) {
             let localBufferOffset = 0;
 
             let items = [];
@@ -204,19 +205,19 @@ export default class Serializer {
     getTypeByteSize(type) {
 
         switch (type) {
-        case Serializer.TYPES.FLOAT32: {
+        case TYPES.FLOAT32: {
             return Float32Array.BYTES_PER_ELEMENT;
         }
-        case Serializer.TYPES.INT32: {
+        case TYPES.INT32: {
             return Int32Array.BYTES_PER_ELEMENT;
         }
-        case Serializer.TYPES.INT16: {
+        case TYPES.INT16: {
             return Int16Array.BYTES_PER_ELEMENT;
         }
-        case Serializer.TYPES.INT8: {
+        case TYPES.INT8: {
             return Int8Array.BYTES_PER_ELEMENT;
         }
-        case Serializer.TYPES.UINT8: {
+        case TYPES.UINT8: {
             return Uint8Array.BYTES_PER_ELEMENT;
         }
 
@@ -234,18 +235,3 @@ export default class Serializer {
 
     }
 }
-
-/**
-* The TYPES object defines the supported serialization types
-* @constant
-*/
-Serializer.TYPES = {
-    FLOAT32: 'FLOAT32',
-    INT32: 'INT32',
-    INT16: 'INT16',
-    INT8: 'INT8',
-    UINT8: 'UINT8',
-    STRING: 'STRING',
-    CLASSINSTANCE: 'CLASSINSTANCE',
-    LIST: 'LIST'
-};
