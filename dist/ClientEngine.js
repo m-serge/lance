@@ -4,8 +4,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _socket = require('socket.io-client');
 
 var _socket2 = _interopRequireDefault(_socket);
@@ -36,18 +34,16 @@ var _NetworkTransmitter2 = _interopRequireDefault(_NetworkTransmitter);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 // externalizing these parameters as options would add confusion to game
 // developers, and provide no real benefit.
-var STEP_DRIFT_THRESHOLDS = {
+const STEP_DRIFT_THRESHOLDS = {
     onServerSync: { MAX_LEAD: 1, MAX_LAG: 3 }, // max step lead/lag allowed after every server sync
     onEveryStep: { MAX_LEAD: 7, MAX_LAG: 8 // max step lead/lag allowed at every step
     } };
-var STEP_DRIFT_THRESHOLD__CLIENT_RESET = 20; // if we are behind this many steps, just reset the step counter
-var GAME_UPS = 60; // default number of game steps per second
-var STEP_DELAY_MSEC = 12; // if forward drift detected, delay next execution by this amount
-var STEP_HURRY_MSEC = 8; // if backward drift detected, hurry next execution by this amount
+const STEP_DRIFT_THRESHOLD__CLIENT_RESET = 20; // if we are behind this many steps, just reset the step counter
+const GAME_UPS = 60; // default number of game steps per second
+const STEP_DELAY_MSEC = 12; // if forward drift detected, delay next execution by this amount
+const STEP_HURRY_MSEC = 8; // if backward drift detected, hurry next execution by this amount
 
 /**
  * The client engine is the singleton which manages the client-side
@@ -55,8 +51,7 @@ var STEP_HURRY_MSEC = 8; // if backward drift detected, hurry next execution by 
  * starting client steps, and handling world updates which arrive from
  * the server.
  */
-
-var ClientEngine = function () {
+class ClientEngine {
 
     /**
       * Create a client engine instance.
@@ -75,8 +70,7 @@ var ClientEngine = function () {
       * @param {Number} inputOptions.syncOptions.remoteObjBending - amount of bending towards original client position, after each sync, for remote objects
       * @param {Renderer} Renderer - the Renderer class constructor
       */
-    function ClientEngine(gameEngine, inputOptions, Renderer) {
-        _classCallCheck(this, ClientEngine);
+    constructor(gameEngine, inputOptions, Renderer) {
 
         this.options = Object.assign({
             autoConnect: true,
@@ -125,9 +119,7 @@ var ClientEngine = function () {
         // create a buffer of delayed inputs (fifo)
         if (inputOptions && inputOptions.delayInputCount) {
             this.delayedInputs = [];
-            for (var i = 0; i < inputOptions.delayInputCount; i++) {
-                this.delayedInputs[i] = [];
-            }
+            for (let i = 0; i < inputOptions.delayInputCount; i++) this.delayedInputs[i] = [];
         }
     }
 
@@ -137,286 +129,255 @@ var ClientEngine = function () {
      * @param {Object} object the game object to check
      * @return {Boolean} true if the game object is owned by the player on this client
      */
+    isOwnedByPlayer(object) {
+        return object.playerId == this.playerId;
+    }
 
+    configureSynchronization() {
 
-    _createClass(ClientEngine, [{
-        key: 'isOwnedByPlayer',
-        value: function isOwnedByPlayer(object) {
-            return object.playerId == this.playerId;
-        }
-    }, {
-        key: 'configureSynchronization',
-        value: function configureSynchronization() {
-
-            // the reflect syncronizer is just interpolate strategy,
-            // configured to show server syncs
-            var syncOptions = this.options.syncOptions;
-            if (syncOptions.sync === 'reflect') {
-                //todo would be nicer to use an enum
-                syncOptions.sync = 'interpolate';
-                syncOptions.reflect = true;
-            }
-
-            var synchronizer = new _Synchronizer2.default(this, syncOptions);
+        // the reflect syncronizer is just interpolate strategy,
+        // configured to show server syncs
+        let syncOptions = this.options.syncOptions;
+        if (syncOptions.sync === 'reflect') {
+            //todo would be nicer to use an enum
+            syncOptions.sync = 'interpolate';
+            syncOptions.reflect = true;
         }
 
-        /**
-         * Makes a connection to the game server
-         *
-         * @param {Object} [options] additional socket.io options
-         * @return {Promise} Resolved when the connection is made to the server
-         */
+        const synchronizer = new _Synchronizer2.default(this, syncOptions);
+    }
 
-    }, {
-        key: 'connect',
-        value: function connect() {
-            var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    /**
+     * Makes a connection to the game server
+     *
+     * @param {Object} [options] additional socket.io options
+     * @return {Promise} Resolved when the connection is made to the server
+     */
+    connect(options = {}) {
 
+        let that = this;
+        function connectSocket(matchMakerAnswer) {
+            return new Promise((resolve, reject) => {
 
-            var that = this;
-            function connectSocket(matchMakerAnswer) {
-                return new Promise(function (resolve, reject) {
+                if (matchMakerAnswer.status !== 'ok') reject();
 
-                    if (matchMakerAnswer.status !== 'ok') reject();
+                console.log(`connecting to game server ${matchMakerAnswer.serverURL}`);
+                that.socket = (0, _socket2.default)(matchMakerAnswer.serverURL, options);
 
-                    console.log('connecting to game server ' + matchMakerAnswer.serverURL);
-                    that.socket = (0, _socket2.default)(matchMakerAnswer.serverURL, options);
+                that.networkMonitor.registerClient(that);
 
-                    that.networkMonitor.registerClient(that);
-
-                    that.socket.once('connect', function () {
-                        console.log('connection made');
-                        resolve();
-                    });
-
-                    that.socket.on('playerJoined', function (playerData) {
-                        that.playerId = playerData.playerId;
-                        that.messageIndex = Number(that.playerId) * 10000;
-                    });
-
-                    that.socket.on('worldUpdate', function (worldData) {
-                        that.inboundMessages.push(worldData);
-                    });
+                that.socket.once('connect', () => {
+                    console.log('connection made');
+                    resolve();
                 });
-            }
 
-            var matchmaker = Promise.resolve({ serverURL: null, status: 'ok' });
-            if (this.options.matchmaker) matchmaker = _Utils2.default.httpGetPromise(this.options.matchmaker);
+                that.socket.on('playerJoined', playerData => {
+                    that.playerId = playerData.playerId;
+                    that.messageIndex = Number(that.playerId) * 10000;
+                });
 
-            return matchmaker.then(connectSocket);
-        }
-
-        /**
-         * Start the client engine, setting up the game loop, rendering loop and renderer.
-         *
-         * @return {Promise} Resolves once the Renderer has been initialized, and the game is
-         * ready to connect
-         */
-
-    }, {
-        key: 'start',
-        value: function start() {
-            var _this = this;
-
-            // initialize the renderer
-            // the render loop waits for next animation frame
-            if (!this.renderer) alert('ERROR: game has not defined a renderer');
-            var renderLoop = function renderLoop() {
-                _this.renderer.draw();
-                window.requestAnimationFrame(renderLoop);
-            };
-
-            return this.renderer.init().then(function () {
-                _this.gameEngine.start();
-
-                if (_this.options.scheduler === 'fixed') {
-                    // schedule and start the game loop
-                    _this.scheduler = new _Scheduler2.default({
-                        period: _this.options.stepPeriod,
-                        tick: _this.step.bind(_this),
-                        delay: STEP_DELAY_MSEC
-                    });
-                    _this.scheduler.start();
-                }
-
-                if (typeof window !== 'undefined') window.requestAnimationFrame(renderLoop);
-                if (_this.options.autoConnect && _this.options.standaloneMode !== true) {
-                    _this.connect();
-                }
+                that.socket.on('worldUpdate', worldData => {
+                    that.inboundMessages.push(worldData);
+                });
             });
         }
 
-        // check if client step is too far ahead (leading) or too far
-        // behing (lagging) the server step
+        let matchmaker = Promise.resolve({ serverURL: null, status: 'ok' });
+        if (this.options.matchmaker) matchmaker = _Utils2.default.httpGetPromise(this.options.matchmaker);
 
-    }, {
-        key: 'checkDrift',
-        value: function checkDrift(checkType) {
+        return matchmaker.then(connectSocket);
+    }
 
-            if (!this.gameEngine.serverStep) return;
+    /**
+     * Start the client engine, setting up the game loop, rendering loop and renderer.
+     *
+     * @return {Promise} Resolves once the Renderer has been initialized, and the game is
+     * ready to connect
+     */
+    start() {
+        // initialize the renderer
+        // the render loop waits for next animation frame
+        if (!this.renderer) alert('ERROR: game has not defined a renderer');
+        let renderLoop = () => {
+            this.renderer.draw();
+            window.requestAnimationFrame(renderLoop);
+        };
 
-            var maxLead = STEP_DRIFT_THRESHOLDS[checkType].MAX_LEAD;
-            var maxLag = STEP_DRIFT_THRESHOLDS[checkType].MAX_LAG;
-            var clientStep = this.gameEngine.world.stepCount;
-            var serverStep = this.gameEngine.serverStep;
-            if (clientStep > serverStep + maxLead) {
-                this.gameEngine.trace.warn('step drift ' + checkType + '. [' + clientStep + ' > ' + serverStep + ' + ' + maxLead + '] Client is ahead of server.  Delaying next step.');
-                if (this.scheduler) this.scheduler.delayTick();
-                this.lastStepTime += STEP_DELAY_MSEC;
-                this.correction += STEP_DELAY_MSEC;
-            } else if (serverStep > clientStep + maxLag) {
-                this.gameEngine.trace.warn('step drift ' + checkType + '. [' + serverStep + ' > ' + clientStep + ' + ' + maxLag + '] Client is behind server.  Hurrying next step.');
-                if (this.scheduler) this.scheduler.hurryTick();
-                this.lastStepTime -= STEP_HURRY_MSEC;
-                this.correction -= STEP_HURRY_MSEC;
+        return this.renderer.init().then(() => {
+            this.gameEngine.start();
+
+            if (this.options.scheduler === 'fixed') {
+                // schedule and start the game loop
+                this.scheduler = new _Scheduler2.default({
+                    period: this.options.stepPeriod,
+                    tick: this.step.bind(this),
+                    delay: STEP_DELAY_MSEC
+                });
+                this.scheduler.start();
             }
+
+            if (typeof window !== 'undefined') window.requestAnimationFrame(renderLoop);
+            if (this.options.autoConnect && this.options.standaloneMode !== true) {
+                this.connect();
+            }
+        });
+    }
+
+    // check if client step is too far ahead (leading) or too far
+    // behing (lagging) the server step
+    checkDrift(checkType) {
+
+        if (!this.gameEngine.serverStep) return;
+
+        let maxLead = STEP_DRIFT_THRESHOLDS[checkType].MAX_LEAD;
+        let maxLag = STEP_DRIFT_THRESHOLDS[checkType].MAX_LAG;
+        let clientStep = this.gameEngine.world.stepCount;
+        let serverStep = this.gameEngine.serverStep;
+        if (clientStep > serverStep + maxLead) {
+            this.gameEngine.trace.warn(`step drift ${checkType}. [${clientStep} > ${serverStep} + ${maxLead}] Client is ahead of server.  Delaying next step.`);
+            if (this.scheduler) this.scheduler.delayTick();
+            this.lastStepTime += STEP_DELAY_MSEC;
+            this.correction += STEP_DELAY_MSEC;
+        } else if (serverStep > clientStep + maxLag) {
+            this.gameEngine.trace.warn(`step drift ${checkType}. [${serverStep} > ${clientStep} + ${maxLag}] Client is behind server.  Hurrying next step.`);
+            if (this.scheduler) this.scheduler.hurryTick();
+            this.lastStepTime -= STEP_HURRY_MSEC;
+            this.correction -= STEP_HURRY_MSEC;
         }
-    }, {
-        key: 'step',
-        value: function step(t, dt, physicsOnly) {
+    }
 
-            // physics only case
-            if (physicsOnly) {
-                this.gameEngine.step(false, t, dt, physicsOnly);
-                return;
-            }
+    step(t, dt, physicsOnly) {
 
-            // first update the trace state
-            this.gameEngine.trace.setStep(this.gameEngine.world.stepCount + 1);
-
-            // skip one step if requested
-            if (this.skipOneStep === true) {
-                this.skipOneStep = false;
-                return;
-            }
-
-            this.gameEngine.emit('client__preStep');
-            while (this.inboundMessages.length > 0) {
-                this.handleInboundMessage(this.inboundMessages.pop());
-                this.checkDrift('onServerSync');
-            }
-
-            // check for server/client step drift without update
-            this.checkDrift('onEveryStep');
-
-            // perform game engine step
-            if (this.options.standaloneMode !== true) {
-                this.handleOutboundInput();
-            }
-            this.applyDelayedInputs();
-            this.gameEngine.step(false, t, dt);
-            this.gameEngine.emit('client__postStep', { dt: dt });
-
-            if (this.options.standaloneMode !== true && this.gameEngine.trace.length && this.socket) {
-                // socket might not have been initialized at this point
-                this.socket.emit('trace', JSON.stringify(this.gameEngine.trace.rotate()));
-            }
-        }
-    }, {
-        key: 'doInputLocal',
-        value: function doInputLocal(message) {
-            if (this.gameEngine.passive) {
-                return;
-            }
-
-            var inputEvent = { input: message.data, playerId: this.playerId };
-            this.gameEngine.emit('client__processInput', inputEvent);
-            this.gameEngine.emit('processInput', inputEvent);
-            this.gameEngine.processInput(message.data, this.playerId, false);
-        }
-    }, {
-        key: 'applyDelayedInputs',
-        value: function applyDelayedInputs() {
-            if (!this.delayedInputs) {
-                return;
-            }
-            var that = this;
-            var delayed = this.delayedInputs.shift();
-            if (delayed && delayed.length) {
-                delayed.forEach(that.doInputLocal.bind(that));
-            }
-            this.delayedInputs.push([]);
+        // physics only case
+        if (physicsOnly) {
+            this.gameEngine.step(false, t, dt, physicsOnly);
+            return;
         }
 
-        /**
-         * This function should be called by the client whenever a user input
-         * occurs.  This function will emit the input event,
-         * forward the input to the client's game engine (with a delay if
-         * so configured) and will transmit the input to the server as well.
-         *
-         * This function can be called by the extended client engine class,
-         * typically at the beginning of client-side step processing (see event client__preStep)
-         *
-         * @param {Object} input - string representing the input
-         * @param {Object} inputOptions - options for the input
-         */
+        // first update the trace state
+        this.gameEngine.trace.setStep(this.gameEngine.world.stepCount + 1);
 
-    }, {
-        key: 'sendInput',
-        value: function sendInput(input, inputOptions) {
-            var message = {
-                command: 'move',
-                data: {
-                    messageIndex: this.messageIndex,
-                    step: this.gameEngine.world.stepCount,
-                    input: input,
-                    options: inputOptions
-                }
-            };
-
-            this.gameEngine.trace.info('USER INPUT[' + this.messageIndex + ']: ' + input + ' ' + (inputOptions ? JSON.stringify(inputOptions) : '{}'));
-
-            // if we delay input application on client, then queue it
-            // otherwise apply it now
-            if (this.delayedInputs) {
-                this.delayedInputs[this.delayedInputs.length - 1].push(message);
-            } else {
-                this.doInputLocal(message);
-            }
-
-            if (this.options.standaloneMode !== true) {
-                this.outboundMessages.push(message);
-            }
-
-            this.messageIndex++;
+        // skip one step if requested
+        if (this.skipOneStep === true) {
+            this.skipOneStep = false;
+            return;
         }
-    }, {
-        key: 'handleInboundMessage',
-        value: function handleInboundMessage(syncData) {
 
-            var syncEvents = this.networkTransmitter.deserializePayload(syncData).events;
-            var syncHeader = syncEvents.find(function (e) {
-                return e.eventName === 'syncHeader';
-            });
-
-            // emit that a snapshot has been received
-            this.gameEngine.serverStep = syncHeader.stepCount;
-            this.gameEngine.emit('client__syncReceived', {
-                syncEvents: syncEvents,
-                stepCount: syncHeader.stepCount,
-                fullUpdate: syncHeader.fullUpdate
-            });
-
-            this.gameEngine.trace.info('========== inbound world update ' + syncHeader.stepCount + ' ==========');
-
-            // finally update the stepCount
-            if (syncHeader.stepCount > this.gameEngine.world.stepCount + STEP_DRIFT_THRESHOLD__CLIENT_RESET) {
-                this.gameEngine.trace.info('========== world step count updated from ' + this.gameEngine.world.stepCount + ' to  ' + syncHeader.stepCount + ' ==========');
-                this.gameEngine.emit('client__stepReset', { oldStep: this.gameEngine.world.stepCount, newStep: syncHeader.stepCount });
-                this.gameEngine.world.stepCount = syncHeader.stepCount;
-            }
+        this.gameEngine.emit('client__preStep');
+        while (this.inboundMessages.length > 0) {
+            this.handleInboundMessage(this.inboundMessages.pop());
+            this.checkDrift('onServerSync');
         }
-    }, {
-        key: 'handleOutboundInput',
-        value: function handleOutboundInput() {
-            for (var x = 0; x < this.outboundMessages.length; x++) {
-                this.socket.emit(this.outboundMessages[x].command, this.outboundMessages[x].data);
-            }
-            this.outboundMessages = [];
+
+        // check for server/client step drift without update
+        this.checkDrift('onEveryStep');
+
+        // perform game engine step
+        if (this.options.standaloneMode !== true) {
+            this.handleOutboundInput();
         }
-    }]);
+        this.applyDelayedInputs();
+        this.gameEngine.step(false, t, dt);
+        this.gameEngine.emit('client__postStep', { dt });
 
-    return ClientEngine;
-}();
+        if (this.options.standaloneMode !== true && this.gameEngine.trace.length && this.socket) {
+            // socket might not have been initialized at this point
+            this.socket.emit('trace', JSON.stringify(this.gameEngine.trace.rotate()));
+        }
+    }
 
+    doInputLocal(message) {
+        if (this.gameEngine.passive) {
+            return;
+        }
+
+        const inputEvent = { input: message.data, playerId: this.playerId };
+        this.gameEngine.emit('client__processInput', inputEvent);
+        this.gameEngine.emit('processInput', inputEvent);
+        this.gameEngine.processInput(message.data, this.playerId, false);
+    }
+
+    applyDelayedInputs() {
+        if (!this.delayedInputs) {
+            return;
+        }
+        let that = this;
+        let delayed = this.delayedInputs.shift();
+        if (delayed && delayed.length) {
+            delayed.forEach(that.doInputLocal.bind(that));
+        }
+        this.delayedInputs.push([]);
+    }
+
+    /**
+     * This function should be called by the client whenever a user input
+     * occurs.  This function will emit the input event,
+     * forward the input to the client's game engine (with a delay if
+     * so configured) and will transmit the input to the server as well.
+     *
+     * This function can be called by the extended client engine class,
+     * typically at the beginning of client-side step processing (see event client__preStep)
+     *
+     * @param {Object} input - string representing the input
+     * @param {Object} inputOptions - options for the input
+     */
+    sendInput(input, inputOptions) {
+        var message = {
+            command: 'move',
+            data: {
+                messageIndex: this.messageIndex,
+                step: this.gameEngine.world.stepCount,
+                input: input,
+                options: inputOptions
+            }
+        };
+
+        this.gameEngine.trace.info(`USER INPUT[${this.messageIndex}]: ${input} ${inputOptions ? JSON.stringify(inputOptions) : '{}'}`);
+
+        // if we delay input application on client, then queue it
+        // otherwise apply it now
+        if (this.delayedInputs) {
+            this.delayedInputs[this.delayedInputs.length - 1].push(message);
+        } else {
+            this.doInputLocal(message);
+        }
+
+        if (this.options.standaloneMode !== true) {
+            this.outboundMessages.push(message);
+        }
+
+        this.messageIndex++;
+    }
+
+    handleInboundMessage(syncData) {
+
+        let syncEvents = this.networkTransmitter.deserializePayload(syncData).events;
+        let syncHeader = syncEvents.find(e => e.eventName === 'syncHeader');
+
+        // emit that a snapshot has been received
+        this.gameEngine.serverStep = syncHeader.stepCount;
+        this.gameEngine.emit('client__syncReceived', {
+            syncEvents: syncEvents,
+            stepCount: syncHeader.stepCount,
+            fullUpdate: syncHeader.fullUpdate
+        });
+
+        this.gameEngine.trace.info(`========== inbound world update ${syncHeader.stepCount} ==========`);
+
+        // finally update the stepCount
+        if (syncHeader.stepCount > this.gameEngine.world.stepCount + STEP_DRIFT_THRESHOLD__CLIENT_RESET) {
+            this.gameEngine.trace.info(`========== world step count updated from ${this.gameEngine.world.stepCount} to  ${syncHeader.stepCount} ==========`);
+            this.gameEngine.emit('client__stepReset', { oldStep: this.gameEngine.world.stepCount, newStep: syncHeader.stepCount });
+            this.gameEngine.world.stepCount = syncHeader.stepCount;
+        }
+    }
+
+    handleOutboundInput() {
+        for (var x = 0; x < this.outboundMessages.length; x++) {
+            this.socket.emit(this.outboundMessages[x].command, this.outboundMessages[x].data);
+        }
+        this.outboundMessages = [];
+    }
+
+}
 exports.default = ClientEngine;

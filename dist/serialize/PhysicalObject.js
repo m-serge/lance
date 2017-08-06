@@ -4,13 +4,9 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _GameObject = require('./GameObject');
 
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-var _GameObject2 = require('./GameObject');
-
-var _GameObject3 = _interopRequireDefault(_GameObject2);
+var _GameObject2 = _interopRequireDefault(_GameObject);
 
 var _Serializer = require('./Serializer');
 
@@ -26,95 +22,77 @@ var _Quaternion2 = _interopRequireDefault(_Quaternion);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
 /**
  * The PhysicalObject is the base class for physical game objects
  */
-var PhysicalObject = function (_GameObject) {
-    _inherits(PhysicalObject, _GameObject);
+class PhysicalObject extends _GameObject2.default {
 
-    _createClass(PhysicalObject, null, [{
-        key: 'netScheme',
+    // TODO:
+    // this code is not performance optimized, generally speaking.
+    // a lot can be done to make it faster, by using temp objects
+    // insead of creating new ones, less copying, and removing some redundancy
+    // in calculations.
 
+    /**
+    * The netScheme is a dictionary of attributes in this game
+    * object.  The attributes listed in the netScheme are those exact
+    * attributes which will be serialized and sent from the server
+    * to each client on every server update.
+    * The netScheme member is implemented as a getter.
+    *
+    * You may choose not to implement this method, in which
+    * case your object only transmits the default attributes
+    * which are already part of {@link PhysicalObject}.
+    * But if you choose to add more attributes, make sure
+    * the return value includes the netScheme of the super class.
+    *
+    * @memberof PhysicalObject
+    * @member {Object} netScheme
+    * @example
+    *     static get netScheme() {
+    *       return Object.assign({
+    *           mojo: { type: Serializer.TYPES.UINT8 },
+    *         }, super.netScheme);
+    *     }
+    */
+    static get netScheme() {
+        return Object.assign({
+            playerId: { type: _Serializer2.default.TYPES.INT16 },
+            position: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
+            quaternion: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
+            velocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
+            angularVelocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE }
+        }, super.netScheme);
+    }
 
-        // TODO:
-        // this code is not performance optimized, generally speaking.
-        // a lot can be done to make it faster, by using temp objects
-        // insead of creating new ones, less copying, and removing some redundancy
-        // in calculations.
-
-        /**
-        * The netScheme is a dictionary of attributes in this game
-        * object.  The attributes listed in the netScheme are those exact
-        * attributes which will be serialized and sent from the server
-        * to each client on every server update.
-        * The netScheme member is implemented as a getter.
-        *
-        * You may choose not to implement this method, in which
-        * case your object only transmits the default attributes
-        * which are already part of {@link PhysicalObject}.
-        * But if you choose to add more attributes, make sure
-        * the return value includes the netScheme of the super class.
-        *
-        * @memberof PhysicalObject
-        * @member {Object} netScheme
-        * @example
-        *     static get netScheme() {
-        *       return Object.assign({
-        *           mojo: { type: Serializer.TYPES.UINT8 },
-        *         }, super.netScheme);
-        *     }
-        */
-        get: function get() {
-            return Object.assign({
-                playerId: { type: _Serializer2.default.TYPES.INT16 },
-                position: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-                quaternion: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-                velocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE },
-                angularVelocity: { type: _Serializer2.default.TYPES.CLASSINSTANCE }
-            }, _get(PhysicalObject.__proto__ || Object.getPrototypeOf(PhysicalObject), 'netScheme', this));
-        }
-
-        /**
-        * Creates an instance of a physical object.
-        * Override to provide starting values for position, velocity, quaternion and angular velocity.
-        * The object ID should be the next value provided by `world.idCount`
-        * @param {String} id - the object id
-        * @param {ThreeVector} position - position vector
-        * @param {ThreeVector} velocity - velocity vector
-        * @param {Quaternion} quaternion - orientation quaternion
-        * @param {ThreeVector} angularVelocity - 3-vector representation of angular velocity
-        */
-
-    }]);
-
-    function PhysicalObject(id, position, velocity, quaternion, angularVelocity) {
-        _classCallCheck(this, PhysicalObject);
-
-        var _this = _possibleConstructorReturn(this, (PhysicalObject.__proto__ || Object.getPrototypeOf(PhysicalObject)).call(this, id));
-
-        _this.playerId = 0;
-        _this.bendingIncrements = 0;
+    /**
+    * Creates an instance of a physical object.
+    * Override to provide starting values for position, velocity, quaternion and angular velocity.
+    * The object ID should be the next value provided by `world.idCount`
+    * @param {String} id - the object id
+    * @param {ThreeVector} position - position vector
+    * @param {ThreeVector} velocity - velocity vector
+    * @param {Quaternion} quaternion - orientation quaternion
+    * @param {ThreeVector} angularVelocity - 3-vector representation of angular velocity
+    */
+    constructor(id, position, velocity, quaternion, angularVelocity) {
+        super(id);
+        this.playerId = 0;
+        this.bendingIncrements = 0;
 
         // set default position, velocity and quaternion
-        _this.position = new _ThreeVector2.default(0, 0, 0);
-        _this.velocity = new _ThreeVector2.default(0, 0, 0);
-        _this.quaternion = new _Quaternion2.default(1, 0, 0, 0);
-        _this.angularVelocity = new _ThreeVector2.default(0, 0, 0);
+        this.position = new _ThreeVector2.default(0, 0, 0);
+        this.velocity = new _ThreeVector2.default(0, 0, 0);
+        this.quaternion = new _Quaternion2.default(1, 0, 0, 0);
+        this.angularVelocity = new _ThreeVector2.default(0, 0, 0);
 
         // use values if provided
-        if (position) _this.position.copy(position);
-        if (velocity) _this.velocity.copy(velocity);
-        if (quaternion) _this.quaternion.copy(quaternion);
-        if (angularVelocity) _this.angularVelocity.copy(angularVelocity);
+        if (position) this.position.copy(position);
+        if (velocity) this.velocity.copy(velocity);
+        if (quaternion) this.quaternion.copy(quaternion);
+        if (angularVelocity) this.angularVelocity.copy(angularVelocity);
 
-        _this.class = PhysicalObject;
-        return _this;
+        this.class = PhysicalObject;
     }
 
     /**
@@ -124,134 +102,112 @@ var PhysicalObject = function (_GameObject) {
      *
      * @return {String} description - a string describing the DynamicObject
      */
+    toString() {
+        let p = this.position.toString();
+        let v = this.velocity.toString();
+        let q = this.quaternion.toString();
+        let a = this.angularVelocity.toString();
+        return `phyObj[${this.id}] player${this.playerId} Pos=${p} Vel=${v} Dir=${q} AVel=${a}`;
+    }
 
+    // display object's physical attributes as a string
+    // for debugging purposes mostly
+    bendingToString() {
+        if (this.bendingIncrements) return `bend=${this.bending} increments=${this.bendingIncrements} deltaPos=${this.bendingPositionDelta} deltaQuat=${this.bendingQuaternionDelta}`;
+        return 'no bending';
+    }
 
-    _createClass(PhysicalObject, [{
-        key: 'toString',
-        value: function toString() {
-            var p = this.position.toString();
-            var v = this.velocity.toString();
-            var q = this.quaternion.toString();
-            var a = this.angularVelocity.toString();
-            return 'phyObj[' + this.id + '] player' + this.playerId + ' Pos=' + p + ' Vel=' + v + ' Dir=' + q + ' AVel=' + a;
+    bendToCurrent(original, bending, worldSettings, isLocal, bendingIncrements) {
+
+        // get the incremental delta position
+        this.incrementScale = bending / bendingIncrements;
+        this.bendingPositionDelta = new _ThreeVector2.default().copy(this.position);
+        this.bendingPositionDelta.subtract(original.position);
+        this.bendingPositionDelta.multiplyScalar(this.incrementScale);
+
+        // get the incremental angular-velocity
+        this.bendingAVDelta = new _ThreeVector2.default().copy(this.angularVelocity);
+        this.bendingAVDelta.subtract(original.angularVelocity);
+        this.bendingAVDelta.multiplyScalar(this.incrementScale);
+
+        // get the incremental quaternion rotation
+        let currentConjugate = new _Quaternion2.default().copy(original.quaternion).conjugate();
+        this.bendingQuaternionDelta = new _Quaternion2.default().copy(this.quaternion);
+        this.bendingQuaternionDelta.multiply(currentConjugate);
+        let axisAngle = this.bendingQuaternionDelta.toAxisAngle();
+        axisAngle.angle *= this.incrementScale;
+        this.bendingQuaternionDelta.setFromAxisAngle(axisAngle.axis, axisAngle.angle);
+
+        this.bendingTarget = new this.constructor();
+        this.bendingTarget.syncTo(this);
+        this.syncTo(original, { keepVelocity: true });
+        this.bendingIncrements = bendingIncrements;
+        this.bending = bending;
+
+        // TODO: use configurable physics bending
+        // TODO: does refreshToPhysics() really belong here?
+        //       should refreshToPhysics be decoupled from syncTo
+        //       and called explicitly in all cases?
+        this.refreshToPhysics();
+    }
+
+    syncTo(other, options) {
+
+        super.syncTo(other);
+
+        this.position.copy(other.position);
+        this.quaternion.copy(other.quaternion);
+        this.angularVelocity.copy(other.angularVelocity);
+
+        if (!options || !options.keepVelocity) {
+            this.velocity.copy(other.velocity);
         }
 
-        // display object's physical attributes as a string
-        // for debugging purposes mostly
+        if (this.physicsObj) this.refreshToPhysics();
+    }
 
-    }, {
-        key: 'bendingToString',
-        value: function bendingToString() {
-            if (this.bendingIncrements) return 'bend=' + this.bending + ' increments=' + this.bendingIncrements + ' deltaPos=' + this.bendingPositionDelta + ' deltaQuat=' + this.bendingQuaternionDelta;
-            return 'no bending';
-        }
-    }, {
-        key: 'bendToCurrent',
-        value: function bendToCurrent(original, bending, worldSettings, isLocal, bendingIncrements) {
+    // update position, quaternion, and velocity from new physical state.
+    refreshFromPhysics() {
+        this.position.copy(this.physicsObj.position);
+        this.quaternion.copy(this.physicsObj.quaternion);
+        this.velocity.copy(this.physicsObj.velocity);
+        this.angularVelocity.copy(this.physicsObj.angularVelocity);
+    }
 
-            // get the incremental delta position
-            this.incrementScale = bending / bendingIncrements;
-            this.bendingPositionDelta = new _ThreeVector2.default().copy(this.position);
-            this.bendingPositionDelta.subtract(original.position);
-            this.bendingPositionDelta.multiplyScalar(this.incrementScale);
+    // update position, quaternion, and velocity from new physical state.
+    refreshToPhysics() {
+        this.physicsObj.position.copy(this.position);
+        this.physicsObj.quaternion.copy(this.quaternion);
+        this.physicsObj.velocity.copy(this.velocity);
+        this.physicsObj.angularVelocity.copy(this.angularVelocity);
+    }
 
-            // get the incremental angular-velocity
-            this.bendingAVDelta = new _ThreeVector2.default().copy(this.angularVelocity);
-            this.bendingAVDelta.subtract(original.angularVelocity);
-            this.bendingAVDelta.multiplyScalar(this.incrementScale);
+    // apply one increment of bending
+    applyIncrementalBending(stepDesc) {
+        if (this.bendingIncrements === 0) return;
 
-            // get the incremental quaternion rotation
-            var currentConjugate = new _Quaternion2.default().copy(original.quaternion).conjugate();
-            this.bendingQuaternionDelta = new _Quaternion2.default().copy(this.quaternion);
-            this.bendingQuaternionDelta.multiply(currentConjugate);
-            var axisAngle = this.bendingQuaternionDelta.toAxisAngle();
-            axisAngle.angle *= this.incrementScale;
-            this.bendingQuaternionDelta.setFromAxisAngle(axisAngle.axis, axisAngle.angle);
+        if (stepDesc && stepDesc.dt) {
+            const timeFactor = stepDesc.dt / (1000 / 60);
+            const posDelta = new _ThreeVector2.default().copy(this.bendingPositionDelta).multiplyScalar(timeFactor);
+            const avDelta = new _ThreeVector2.default().copy(this.bendingAVDelta).multiplyScalar(timeFactor);
+            this.position.add(posDelta);
+            this.angularVelocity.add(avDelta);
 
-            this.bendingTarget = new this.constructor();
-            this.bendingTarget.syncTo(this);
-            this.syncTo(original, { keepVelocity: true });
-            this.bendingIncrements = bendingIncrements;
-            this.bending = bending;
-
-            // TODO: use configurable physics bending
-            // TODO: does refreshToPhysics() really belong here?
-            //       should refreshToPhysics be decoupled from syncTo
-            //       and called explicitly in all cases?
-            this.refreshToPhysics();
-        }
-    }, {
-        key: 'syncTo',
-        value: function syncTo(other, options) {
-
-            _get(PhysicalObject.prototype.__proto__ || Object.getPrototypeOf(PhysicalObject.prototype), 'syncTo', this).call(this, other);
-
-            this.position.copy(other.position);
-            this.quaternion.copy(other.quaternion);
-            this.angularVelocity.copy(other.angularVelocity);
-
-            if (!options || !options.keepVelocity) {
-                this.velocity.copy(other.velocity);
+            // TODO: this is an unacceptable workaround that must be removed.  It solves the
+            // jitter problem by applying only three steps of slerp (thus avoiding slerp to back in time
+            // instead of solving the problem with a true differential quaternion
+            if (this.bendingIncrements > 3) {
+                this.quaternion.slerp(this.bendingTarget.quaternion, this.incrementScale * timeFactor * 0.6);
             }
-
-            if (this.physicsObj) this.refreshToPhysics();
+        } else {
+            this.position.add(this.bendingPositionDelta);
+            this.angularVelocity.add(this.bendingAVDelta);
+            this.quaternion.slerp(this.bendingTarget.quaternion, this.incrementScale);
         }
 
-        // update position, quaternion, and velocity from new physical state.
-
-    }, {
-        key: 'refreshFromPhysics',
-        value: function refreshFromPhysics() {
-            this.position.copy(this.physicsObj.position);
-            this.quaternion.copy(this.physicsObj.quaternion);
-            this.velocity.copy(this.physicsObj.velocity);
-            this.angularVelocity.copy(this.physicsObj.angularVelocity);
-        }
-
-        // update position, quaternion, and velocity from new physical state.
-
-    }, {
-        key: 'refreshToPhysics',
-        value: function refreshToPhysics() {
-            this.physicsObj.position.copy(this.position);
-            this.physicsObj.quaternion.copy(this.quaternion);
-            this.physicsObj.velocity.copy(this.velocity);
-            this.physicsObj.angularVelocity.copy(this.angularVelocity);
-        }
-
-        // apply one increment of bending
-
-    }, {
-        key: 'applyIncrementalBending',
-        value: function applyIncrementalBending(stepDesc) {
-            if (this.bendingIncrements === 0) return;
-
-            if (stepDesc && stepDesc.dt) {
-                var timeFactor = stepDesc.dt / (1000 / 60);
-                var posDelta = new _ThreeVector2.default().copy(this.bendingPositionDelta).multiplyScalar(timeFactor);
-                var avDelta = new _ThreeVector2.default().copy(this.bendingAVDelta).multiplyScalar(timeFactor);
-                this.position.add(posDelta);
-                this.angularVelocity.add(avDelta);
-
-                // TODO: this is an unacceptable workaround that must be removed.  It solves the
-                // jitter problem by applying only three steps of slerp (thus avoiding slerp to back in time
-                // instead of solving the problem with a true differential quaternion
-                if (this.bendingIncrements > 3) {
-                    this.quaternion.slerp(this.bendingTarget.quaternion, this.incrementScale * timeFactor * 0.6);
-                }
-            } else {
-                this.position.add(this.bendingPositionDelta);
-                this.angularVelocity.add(this.bendingAVDelta);
-                this.quaternion.slerp(this.bendingTarget.quaternion, this.incrementScale);
-            }
-
-            // TODO: the following approach is encountering gimbal lock
-            // this.quaternion.multiply(this.bendingQuaternionDelta);
-            this.bendingIncrements--;
-        }
-    }]);
-
-    return PhysicalObject;
-}(_GameObject3.default);
-
+        // TODO: the following approach is encountering gimbal lock
+        // this.quaternion.multiply(this.bendingQuaternionDelta);
+        this.bendingIncrements--;
+    }
+}
 exports.default = PhysicalObject;

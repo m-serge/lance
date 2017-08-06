@@ -3,15 +3,9 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+class Timer {
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Timer = function () {
-    function Timer() {
-        _classCallCheck(this, Timer);
-
+    constructor() {
         this.currentTime = 0;
         this.isActive = false;
         this.idCounter = 0;
@@ -19,95 +13,81 @@ var Timer = function () {
         this.events = {};
     }
 
-    _createClass(Timer, [{
-        key: 'play',
-        value: function play() {
-            this.isActive = true;
-        }
-    }, {
-        key: 'tick',
-        value: function tick() {
-            var event = void 0;
-            var eventId = void 0;
+    play() {
+        this.isActive = true;
+    }
 
-            if (this.isActive) {
-                this.currentTime++;
+    tick() {
+        let event;
+        let eventId;
 
-                for (eventId in this.events) {
-                    event = this.events[eventId];
-                    if (event) {
+        if (this.isActive) {
+            this.currentTime++;
 
-                        if (event.type == 'repeat') {
-                            if ((this.currentTime - event.startOffset) % event.time == 0) {
-                                event.callback.apply(event.thisContext, event.args);
-                            }
+            for (eventId in this.events) {
+                event = this.events[eventId];
+                if (event) {
+
+                    if (event.type == 'repeat') {
+                        if ((this.currentTime - event.startOffset) % event.time == 0) {
+                            event.callback.apply(event.thisContext, event.args);
                         }
-                        if (event.type == 'single') {
-                            if ((this.currentTime - event.startOffset) % event.time == 0) {
-                                event.callback.apply(event.thisContext, event.args);
-                                event.destroy();
-                            }
+                    }
+                    if (event.type == 'single') {
+                        if ((this.currentTime - event.startOffset) % event.time == 0) {
+                            event.callback.apply(event.thisContext, event.args);
+                            event.destroy();
                         }
                     }
                 }
             }
         }
-    }, {
-        key: 'destroyEvent',
-        value: function destroyEvent(eventId) {
-            delete this.events[eventId];
-        }
-    }, {
-        key: 'loop',
-        value: function loop(time, callback) {
-            var timerEvent = new TimerEvent(this, TimerEvent.TYPES.repeat, time, callback);
+    }
 
-            this.events[timerEvent.id] = timerEvent;
+    destroyEvent(eventId) {
+        delete this.events[eventId];
+    }
 
-            return timerEvent;
-        }
-    }, {
-        key: 'add',
-        value: function add(time, callback, thisContext, args) {
-            var timerEvent = new TimerEvent(this, TimerEvent.TYPES.single, time, callback, thisContext, args);
+    loop(time, callback) {
+        let timerEvent = new TimerEvent(this, TimerEvent.TYPES.repeat, time, callback);
 
-            this.events[timerEvent.id] = timerEvent;
-            return timerEvent;
-        }
+        this.events[timerEvent.id] = timerEvent;
 
-        // todo implement timer delete all events
+        return timerEvent;
+    }
 
-    }, {
-        key: 'destroy',
-        value: function destroy(id) {
-            delete this.events[id];
-        }
-    }]);
+    add(time, callback, thisContext, args) {
+        let timerEvent = new TimerEvent(this, TimerEvent.TYPES.single, time, callback, thisContext, args);
 
-    return Timer;
-}();
+        this.events[timerEvent.id] = timerEvent;
+        return timerEvent;
+    }
 
-// timer event
+    // todo implement timer delete all events
 
+    destroy(id) {
+        delete this.events[id];
+    }
+}
 
-exports.default = Timer;
+exports.default = Timer; // timer event
 
-var TimerEvent = function TimerEvent(timer, type, time, callback, thisContext, args) {
-    _classCallCheck(this, TimerEvent);
+class TimerEvent {
+    constructor(timer, type, time, callback, thisContext, args) {
+        this.id = ++timer.idCounter;
+        this.timer = timer;
+        this.type = type;
+        this.time = time;
+        this.callback = callback;
+        this.startOffset = timer.currentTime;
+        this.thisContext = thisContext;
+        this.args = args;
 
-    this.id = ++timer.idCounter;
-    this.timer = timer;
-    this.type = type;
-    this.time = time;
-    this.callback = callback;
-    this.startOffset = timer.currentTime;
-    this.thisContext = thisContext;
-    this.args = args;
-
-    this.destroy = function () {
-        this.timer.destroy(this.id);
-    };
-};
+        this.destroy = function () {
+            this.timer.destroy(this.id);
+        };
+    }
+}
 
 TimerEvent.TYPES = {
     repeat: 'repeat',

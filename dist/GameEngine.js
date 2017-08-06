@@ -4,8 +4,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _GameWorld = require('./GameWorld');
 
 var _GameWorld2 = _interopRequireDefault(_GameWorld);
@@ -23,8 +21,6 @@ var _Trace = require('./lib/Trace');
 var _Trace2 = _interopRequireDefault(_Trace);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
  * The GameEngine contains the game logic.  Extend this class
@@ -45,7 +41,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * and therefore clients must resolve server updates which conflict
  * with client-side predictions.
  */
-var GameEngine = function () {
+class GameEngine {
 
   /**
     * Create a game engine instance.  This needs to happen
@@ -55,11 +51,10 @@ var GameEngine = function () {
     * @param {Number} options.traceLevel - the trace level from 0 to 5.  Lower value traces more.
     * @param {Number} options.delayInputCount - client side only.  Introduce an artificial delay on the client to better match the time it will occur on the server.  This value sets the number of steps the client will wait before applying the input locally
     */
-  function GameEngine(options) {
-    _classCallCheck(this, GameEngine);
+  constructor(options) {
 
     // place the game engine in the LANCE globals
-    var glob = typeof window === 'undefined' ? global : window;
+    const glob = typeof window === 'undefined' ? global : window;
     glob.LANCE = { gameEngine: this };
 
     // if no GameWorld is specified, use the default one
@@ -69,7 +64,7 @@ var GameEngine = function () {
     }, options);
 
     // set up event emitting and interface
-    var eventEmitter = new _eventemitter2.default();
+    let eventEmitter = new _eventemitter2.default();
 
     /**
      * Register a handler for an event
@@ -110,243 +105,195 @@ var GameEngine = function () {
     this.trace = new _Trace2.default({ traceLevel: this.options.traceLevel });
   }
 
-  _createClass(GameEngine, [{
-    key: 'findLocalShadow',
-    value: function findLocalShadow(serverObj) {
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
+  findLocalShadow(serverObj) {
 
-      try {
-
-        for (var _iterator = Object.keys(this.world.objects)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var localId = _step.value;
-
-          if (Number(localId) < this.options.clientIDSpace) continue;
-          var localObj = this.world.objects[localId];
-          if (localObj.hasOwnProperty('inputId') && localObj.inputId === serverObj.inputId) return localObj;
-        }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
-          }
-        } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
-          }
-        }
-      }
-
-      return null;
+    for (let localId of Object.keys(this.world.objects)) {
+      if (Number(localId) < this.options.clientIDSpace) continue;
+      let localObj = this.world.objects[localId];
+      if (localObj.hasOwnProperty('inputId') && localObj.inputId === serverObj.inputId) return localObj;
     }
-  }, {
-    key: 'initWorld',
-    value: function initWorld(worldSettings) {
 
-      this.world = new _GameWorld2.default();
+    return null;
+  }
 
-      // on the client we have a different ID space
-      if (this.options.clientIDSpace) {
-        this.world.idCount = this.options.clientIDSpace;
-      }
+  initWorld(worldSettings) {
 
-      /**
-      * The worldSettings defines the game world constants, such
-      * as width, height, depth, etc. such that all other classes
-      * can reference these values.
-      * @member {Object} worldSettings
-      * @memberof GameEngine
-      */
-      this.worldSettings = Object.assign({}, worldSettings);
+    this.world = new _GameWorld2.default();
+
+    // on the client we have a different ID space
+    if (this.options.clientIDSpace) {
+      this.world.idCount = this.options.clientIDSpace;
     }
 
     /**
-      * Start the game. This method runs on both server
-      * and client. Extending the start method is useful
-      * for setting up the game's worldSettings attribute,
-      * and registering methods on the event handler.
-      */
+    * The worldSettings defines the game world constants, such
+    * as width, height, depth, etc. such that all other classes
+    * can reference these values.
+    * @member {Object} worldSettings
+    * @memberof GameEngine
+    */
+    this.worldSettings = Object.assign({}, worldSettings);
+  }
 
-  }, {
-    key: 'start',
-    value: function start() {
-      var _this = this;
+  /**
+    * Start the game. This method runs on both server
+    * and client. Extending the start method is useful
+    * for setting up the game's worldSettings attribute,
+    * and registering methods on the event handler.
+    */
+  start() {
+    this.trace.info('========== game engine started ==========');
+    this.initWorld();
 
-      this.trace.info('========== game engine started ==========');
-      this.initWorld();
+    // create the default timer
+    this.timer = new _Timer2.default();
+    this.timer.play();
+    this.on('server__postStep', () => {
+      this.timer.tick();
+    });
 
-      // create the default timer
-      this.timer = new _Timer2.default();
-      this.timer.play();
-      this.on('server__postStep', function () {
-        _this.timer.tick();
+    this.emit('start', { timestamp: new Date().getTime() });
+  }
+
+  /**
+    * Single game step.
+    *
+    * @param {Boolean} isReenact - is this step a re-enactment of the past.
+    * @param {Number} t - the current time (optional)
+    * @param {Number} dt - elapsed time since last step was called.  (optional)
+    * @param {Boolean} physicsOnly - do a physics step only, no game logic
+    */
+  step(isReenact, t, dt, physicsOnly) {
+    // physics-only step
+    if (physicsOnly) {
+      if (dt) dt /= 1000; // physics engines work in seconds
+      this.physicsEngine.step(dt, objectFilter);
+      return;
+    }
+
+    // emit preStep event
+    if (isReenact === undefined) throw new Error('game engine does not forward argument isReenact to super class');
+
+    isReenact = Boolean(isReenact);
+    let step = ++this.world.stepCount;
+    let clientIDSpace = this.options.clientIDSpace;
+    this.emit('preStep', { step, isReenact, dt });
+
+    // skip physics for shadow objects during re-enactment
+    function objectFilter(o) {
+      return !isReenact || o.id < clientIDSpace;
+    }
+
+    // physics step
+    if (this.physicsEngine) {
+      if (dt) dt /= 1000; // physics engines work in seconds
+      this.physicsEngine.step(dt, objectFilter);
+    }
+
+    // for each object
+    // - apply incremental bending
+    // - refresh object positions after physics
+    this.world.forEachObject((id, o) => {
+      if (typeof o.refreshFromPhysics === 'function') o.refreshFromPhysics();
+      this.trace.trace(`object[${id}] after ${isReenact ? 'reenact' : 'step'} : ${o.toString()}`);
+    });
+
+    // emit postStep event
+    this.emit('postStep', { step, isReenact });
+  }
+
+  /**
+   * Add object to the game world.
+   * On the client side, the object may not be created, if the server copy
+   * of this object is already in the game world.  This could happen when the client
+   * is using delayed-input, and the RTT is very low.
+   *
+   * @param {Object} object - the object.
+   * @return {Object} object - the final object.
+   */
+  addObjectToWorld(object) {
+
+    // if we are asked to create a local shadow object
+    // the server copy may already have arrived.
+    if (Number(object.id) >= this.options.clientIDSpace) {
+      let serverCopyArrived = false;
+      this.world.forEachObject((id, o) => {
+        if (o.hasOwnProperty('inputId') && o.inputId === object.inputId) serverCopyArrived = true;
       });
-
-      this.emit('start', { timestamp: new Date().getTime() });
-    }
-
-    /**
-      * Single game step.
-      *
-      * @param {Boolean} isReenact - is this step a re-enactment of the past.
-      * @param {Number} t - the current time (optional)
-      * @param {Number} dt - elapsed time since last step was called.  (optional)
-      * @param {Boolean} physicsOnly - do a physics step only, no game logic
-      */
-
-  }, {
-    key: 'step',
-    value: function step(isReenact, t, dt, physicsOnly) {
-      var _this2 = this;
-
-      // physics-only step
-      if (physicsOnly) {
-        if (dt) dt /= 1000; // physics engines work in seconds
-        this.physicsEngine.step(dt, objectFilter);
-        return;
+      if (serverCopyArrived) {
+        this.trace.info(`========== shadow object NOT added ${object.toString()} ==========`);
+        return null;
       }
-
-      // emit preStep event
-      if (isReenact === undefined) throw new Error('game engine does not forward argument isReenact to super class');
-
-      isReenact = Boolean(isReenact);
-      var step = ++this.world.stepCount;
-      var clientIDSpace = this.options.clientIDSpace;
-      this.emit('preStep', { step: step, isReenact: isReenact, dt: dt });
-
-      // skip physics for shadow objects during re-enactment
-      function objectFilter(o) {
-        return !isReenact || o.id < clientIDSpace;
-      }
-
-      // physics step
-      if (this.physicsEngine) {
-        if (dt) dt /= 1000; // physics engines work in seconds
-        this.physicsEngine.step(dt, objectFilter);
-      }
-
-      // for each object
-      // - apply incremental bending
-      // - refresh object positions after physics
-      this.world.forEachObject(function (id, o) {
-        if (typeof o.refreshFromPhysics === 'function') o.refreshFromPhysics();
-        _this2.trace.trace('object[' + id + '] after ' + (isReenact ? 'reenact' : 'step') + ' : ' + o.toString());
-      });
-
-      // emit postStep event
-      this.emit('postStep', { step: step, isReenact: isReenact });
     }
 
-    /**
-     * Add object to the game world.
-     * On the client side, the object may not be created, if the server copy
-     * of this object is already in the game world.  This could happen when the client
-     * is using delayed-input, and the RTT is very low.
-     *
-     * @param {Object} object - the object.
-     * @return {Object} object - the final object.
-     */
+    this.world.objects[object.id] = object;
 
-  }, {
-    key: 'addObjectToWorld',
-    value: function addObjectToWorld(object) {
+    // tell the object to join the game, by creating
+    // its corresponding physical entities and renderer entities.
+    if (typeof object.onAddToWorld === 'function') object.onAddToWorld(this);
 
-      // if we are asked to create a local shadow object
-      // the server copy may already have arrived.
-      if (Number(object.id) >= this.options.clientIDSpace) {
-        var serverCopyArrived = false;
-        this.world.forEachObject(function (id, o) {
-          if (o.hasOwnProperty('inputId') && o.inputId === object.inputId) serverCopyArrived = true;
-        });
-        if (serverCopyArrived) {
-          this.trace.info('========== shadow object NOT added ' + object.toString() + ' ==========');
-          return null;
-        }
-      }
+    this.emit('objectAdded', object);
+    this.trace.info(`========== object added ${object.toString()} ==========`);
 
-      this.world.objects[object.id] = object;
+    return object;
+  }
 
-      // tell the object to join the game, by creating
-      // its corresponding physical entities and renderer entities.
-      if (typeof object.onAddToWorld === 'function') object.onAddToWorld(this);
+  /**
+   * Override this function to implement input handling.
+   * This method will be called on the specific client where the
+   * input was received, and will also be called on the server
+   * when the input reaches the server.  The client does not call this
+   * method directly, rather the client calls {@link ClientEngine#sendInput}
+   * so that the input is sent to both server and client, and so that
+   * the input is delayed artificially if so configured.
+   *
+   * The input is described by a short string, and is given an index.
+   * The index is used internally to keep track of inputs which have already been applied
+   * on the client during synchronization.  The input is also associated with
+   * the ID of a player.
+   *
+   * @param {Object} inputMsg - input descriptor object
+   * @param {String} inputMsg.input - describe the input (e.g. "up", "down", "fire")
+   * @param {Number} inputMsg.messageIndex - input identifier
+   * @param {Number} playerId - the player ID
+   * @param {Boolean} isServer - indicate if this function is being called on the server side
+   */
+  processInput(inputMsg, playerId, isServer) {
+    this.trace.info(`game engine processing input[${inputMsg.messageIndex}] <${inputMsg.input}> from playerId ${playerId}`);
+  }
 
-      this.emit('objectAdded', object);
-      this.trace.info('========== object added ' + object.toString() + ' ==========');
+  /**
+   * Remove an object from the game world.
+   *
+   * @param {String} id - the object ID
+   */
+  removeObjectFromWorld(id) {
+    let ob = this.world.objects[id];
+    if (!ob) throw new Error(`Game attempted to remove a game object which doesn't (or never did) exist, id=${id}`);
+    this.trace.info(`========== destroying object ${ob.toString()} ==========`);
+    this.emit('objectDestroyed', ob);
+    ob.destroy();
+    delete this.world.objects[id];
+  }
 
-      return object;
-    }
+  /**
+   * Register Game Object Classes
+   *
+   * @example
+   * registerClasses(serializer) {
+   *   serializer.registerClass(require('../common/Paddle'));
+   *   serializer.registerClass(require('../common/Ball'));
+   * }
+   *
+   * @param {Serializer} serializer - the serializer
+   */
+  registerClasses(serializer) {}
 
-    /**
-     * Override this function to implement input handling.
-     * This method will be called on the specific client where the
-     * input was received, and will also be called on the server
-     * when the input reaches the server.  The client does not call this
-     * method directly, rather the client calls {@link ClientEngine#sendInput}
-     * so that the input is sent to both server and client, and so that
-     * the input is delayed artificially if so configured.
-     *
-     * The input is described by a short string, and is given an index.
-     * The index is used internally to keep track of inputs which have already been applied
-     * on the client during synchronization.  The input is also associated with
-     * the ID of a player.
-     *
-     * @param {Object} inputMsg - input descriptor object
-     * @param {String} inputMsg.input - describe the input (e.g. "up", "down", "fire")
-     * @param {Number} inputMsg.messageIndex - input identifier
-     * @param {Number} playerId - the player ID
-     * @param {Boolean} isServer - indicate if this function is being called on the server side
-     */
+}
 
-  }, {
-    key: 'processInput',
-    value: function processInput(inputMsg, playerId, isServer) {
-      this.trace.info('game engine processing input[' + inputMsg.messageIndex + '] <' + inputMsg.input + '> from playerId ' + playerId);
-    }
-
-    /**
-     * Remove an object from the game world.
-     *
-     * @param {String} id - the object ID
-     */
-
-  }, {
-    key: 'removeObjectFromWorld',
-    value: function removeObjectFromWorld(id) {
-      var ob = this.world.objects[id];
-      if (!ob) throw new Error('Game attempted to remove a game object which doesn\'t (or never did) exist, id=' + id);
-      this.trace.info('========== destroying object ' + ob.toString() + ' ==========');
-      this.emit('objectDestroyed', ob);
-      ob.destroy();
-      delete this.world.objects[id];
-    }
-
-    /**
-     * Register Game Object Classes
-     *
-     * @example
-     * registerClasses(serializer) {
-     *   serializer.registerClass(require('../common/Paddle'));
-     *   serializer.registerClass(require('../common/Ball'));
-     * }
-     *
-     * @param {Serializer} serializer - the serializer
-     */
-
-  }, {
-    key: 'registerClasses',
-    value: function registerClasses(serializer) {}
-  }]);
-
-  return GameEngine;
-}();
-
-/**
- * EVENTS
- */
+exports.default = GameEngine; /**
+                               * EVENTS
+                               */
 
 /**
  * Marks the beginning of a new game step
@@ -530,6 +477,3 @@ var GameEngine = function () {
  * @event GameEngine#start
  * @param {Number} timestamp - UTC epoch of start time
  */
-
-
-exports.default = GameEngine;

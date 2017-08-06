@@ -4,20 +4,16 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _eventemitter = require('eventemitter3');
 
 var _eventemitter2 = _interopRequireDefault(_eventemitter);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 //todo add all keyboard keys
 
 // keyboard handling
-var keyCodeTable = {
+const keyCodeTable = {
     32: 'space',
     37: 'left',
     38: 'up',
@@ -32,13 +28,9 @@ var keyCodeTable = {
 /**
  * This class allows easy usage of device keyboard controls
  */
+class KeyboardControls {
 
-var KeyboardControls = function () {
-    function KeyboardControls(clientEngine) {
-        var _this = this;
-
-        _classCallCheck(this, KeyboardControls);
-
+    constructor(clientEngine) {
         Object.assign(this, _eventemitter2.default.prototype);
         this.clientEngine = clientEngine;
         this.gameEngine = clientEngine.gameEngine;
@@ -51,98 +43,64 @@ var KeyboardControls = function () {
         // a list of bound keys and their corresponding actions
         this.boundKeys = {};
 
-        this.gameEngine.on('client__preStep', function () {
-            var _iteratorNormalCompletion = true;
-            var _didIteratorError = false;
-            var _iteratorError = undefined;
+        this.gameEngine.on('client__preStep', () => {
+            for (let keyName of Object.keys(this.boundKeys)) {
+                if (this.keyState[keyName] && this.keyState[keyName].isDown) {
 
-            try {
-                for (var _iterator = Object.keys(_this.boundKeys)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                    var keyName = _step.value;
-
-                    if (_this.keyState[keyName] && _this.keyState[keyName].isDown) {
-
-                        //handle repeat press
-                        if (_this.boundKeys[keyName].options.repeat || _this.keyState[keyName].count == 0) {
-                            //todo movement is probably redundant
-                            _this.clientEngine.sendInput(_this.boundKeys[keyName].actionName, { movement: true });
-                            _this.keyState[keyName].count++;
-                        }
-                    }
-                }
-            } catch (err) {
-                _didIteratorError = true;
-                _iteratorError = err;
-            } finally {
-                try {
-                    if (!_iteratorNormalCompletion && _iterator.return) {
-                        _iterator.return();
-                    }
-                } finally {
-                    if (_didIteratorError) {
-                        throw _iteratorError;
+                    //handle repeat press
+                    if (this.boundKeys[keyName].options.repeat || this.keyState[keyName].count == 0) {
+                        //todo movement is probably redundant
+                        this.clientEngine.sendInput(this.boundKeys[keyName].actionName, { movement: true });
+                        this.keyState[keyName].count++;
                     }
                 }
             }
         });
     }
 
-    _createClass(KeyboardControls, [{
-        key: 'setupListeners',
-        value: function setupListeners() {
-            var _this2 = this;
+    setupListeners() {
+        document.addEventListener('keydown', e => {
+            this.onKeyChange(e, true);
+        });
+        document.addEventListener('keyup', e => {
+            this.onKeyChange(e, false);
+        });
+    }
 
-            document.addEventListener('keydown', function (e) {
-                _this2.onKeyChange(e, true);
-            });
-            document.addEventListener('keyup', function (e) {
-                _this2.onKeyChange(e, false);
-            });
-        }
-    }, {
-        key: 'bindKey',
-        value: function bindKey(keys, actionName, options) {
-            var _this3 = this;
+    bindKey(keys, actionName, options) {
+        if (!Array.isArray(keys)) keys = [keys];
 
-            if (!Array.isArray(keys)) keys = [keys];
+        let keyOptions = Object.assign({
+            repeat: false
+        }, options);
 
-            var keyOptions = Object.assign({
-                repeat: false
-            }, options);
+        keys.forEach(keyName => {
+            this.boundKeys[keyName] = { actionName, options: keyOptions };
+        });
+    }
 
-            keys.forEach(function (keyName) {
-                _this3.boundKeys[keyName] = { actionName: actionName, options: keyOptions };
-            });
-        }
+    //todo implement unbindKey
 
-        //todo implement unbindKey
+    onKeyChange(e, isDown) {
+        e = e || window.event;
 
-    }, {
-        key: 'onKeyChange',
-        value: function onKeyChange(e, isDown) {
-            e = e || window.event;
-
-            var keyName = keyCodeTable[e.keyCode];
-            if (keyName) {
-                if (this.keyState[keyName] == null) {
-                    this.keyState[keyName] = {
-                        count: 0
-                    };
-                }
-                this.keyState[keyName].isDown = isDown;
-
-                //key up, reset press count
-                if (!isDown) this.keyState[keyName].count = 0;
-
-                // keep reference to the last key pressed to avoid duplicates
-                this.lastKeyPressed = isDown ? e.keyCode : null;
-                // this.renderer.onKeyChange({ keyName, isDown });
-                e.preventDefault();
+        let keyName = keyCodeTable[e.keyCode];
+        if (keyName) {
+            if (this.keyState[keyName] == null) {
+                this.keyState[keyName] = {
+                    count: 0
+                };
             }
+            this.keyState[keyName].isDown = isDown;
+
+            //key up, reset press count
+            if (!isDown) this.keyState[keyName].count = 0;
+
+            // keep reference to the last key pressed to avoid duplicates
+            this.lastKeyPressed = isDown ? e.keyCode : null;
+            // this.renderer.onKeyChange({ keyName, isDown });
+            e.preventDefault();
         }
-    }]);
-
-    return KeyboardControls;
-}();
-
+    }
+}
 exports.default = KeyboardControls;

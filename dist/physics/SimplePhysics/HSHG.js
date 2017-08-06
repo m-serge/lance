@@ -204,7 +204,7 @@ HSHG.prototype.queryForCollisionPairs = function (broadOverlapTestCallback) {
         possibleCollisions = [];
 
     // default broad test to internal aabb overlap test
-    var broadOverlapTest = broadOverlapTestCallback || testAABBOverlap;
+    let broadOverlapTest = broadOverlapTestCallback || testAABBOverlap;
 
     // for all grids ordered by cell size ASC
     for (i = 0; i < this._grids.length; i++) {
