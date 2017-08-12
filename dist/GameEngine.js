@@ -118,7 +118,7 @@ class GameEngine {
 
   initWorld(worldSettings) {
 
-    this.world = new _GameWorld2.default();
+    this.world = new this.options.GameWorld();
 
     // on the client we have a different ID space
     if (this.options.clientIDSpace) {
@@ -143,7 +143,7 @@ class GameEngine {
     */
   start() {
     this.trace.info('========== game engine started ==========');
-    this.initWorld();
+    this.initWorld(this.options.worldSettings);
 
     // create the default timer
     this.timer = new _Timer2.default();
